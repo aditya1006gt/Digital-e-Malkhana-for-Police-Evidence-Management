@@ -51,7 +51,7 @@ export function AppBar() {
       <div className="max-w-full mx-auto px-6 h-16 flex items-center justify-between">
         
         {/* Logo & Department Brand */}
-        <button onClick={() => navigate("/dashboard")} className="flex items-center gap-3">
+        <button onClick={() => navigate("/dashboard")} className="flex items-center gap-3 cursor-pointer">
           <div className="bg-white p-1.5 rounded-lg">
              <div className="text-xl">⚖️</div>
           </div>
@@ -69,14 +69,14 @@ export function AppBar() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/scan")}
-            className="hidden md:flex items-center gap-2 text-white text-xs font-bold px-4 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 transition"
+            className="hidden md:flex items-center gap-2 text-white text-xs font-bold px-4 py-2 rounded-lg border border-slate-700 hover:bg-slate-800 transition cursor-pointer"
           >
             <span>🔍</span> QUICK SCAN
           </button>
 
           <button
             onClick={() => navigate("/create-case")}
-            className="text-white text-xs font-bold px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition shadow-lg shadow-blue-900/20"
+            className="text-white text-xs font-bold px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition shadow-lg shadow-blue-900/20 cursor-pointer"
           >
             + NEW CASE
           </button>
@@ -85,10 +85,6 @@ export function AppBar() {
           <div className="h-8 w-[1px] bg-slate-800 mx-1 hidden md:block"></div>
           
           <div className="flex items-center gap-3 pl-2">
-            <div className="hidden lg:block text-right">
-                <p className="text-[10px] font-bold text-slate-500 leading-none">OFFICER</p>
-                <p className="text-xs font-medium text-slate-200 mt-1 uppercase tracking-tight">{initials}</p>
-            </div>
             <div className="relative">
               <SelectDropdown 
                 label={

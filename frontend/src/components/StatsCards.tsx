@@ -16,7 +16,7 @@ export const StatsCard = ({ title, value, icon, color }: StatsCardProps) => {
         <div className={`p-6 rounded-2xl border ${colors[color]} flex items-center justify-between shadow-lg`}>
             <div>
                 <p className="text-sm font-medium opacity-80">{title}</p>
-                <p className="text-3xl font-bold mt-1 text-white">{value}</p>
+                <p className="text-3xl font-bold mt-1 text-black">{value}</p>
             </div>
             <div className="text-3xl bg-slate-900/50 p-3 rounded-xl">
                 {icon}

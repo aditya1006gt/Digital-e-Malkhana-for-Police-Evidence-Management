@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { URL } from "../config";
 import { AppBar } from "../components/AppBar";
+import { Sidebar } from "../components/SideBar"; // Added Sidebar import
 
 export const CaseDetails = () => {
     const { id } = useParams();
@@ -15,44 +16,86 @@ export const CaseDetails = () => {
         }).then(res => {
             setCaseInfo(res.data.case);
             setLoading(false);
-        });
+        }).catch(() => setLoading(false));
     }, [id]);
 
-    if (loading) return <div className="h-screen flex items-center justify-center font-mono">RETRIEVING CASE RECORDS...</div>;
+    // Consistent layout for Loading state
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-white">
+                <AppBar />
+                <div className="flex">
+                    <aside className="hidden md:block w-64 border-r border-gray-100 h-[calc(100vh-64px)] sticky top-16 bg-gray-50/50">
+                        <Sidebar />
+                    </aside>
+                    <main className="flex-1 flex items-center justify-center font-black text-xs tracking-[0.3em] text-gray-400">
+                        RETRIEVING CASE RECORDS...
+                    </main>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-white pb-20">
             <AppBar />
-            <div className="max-w-5xl mx-auto p-6">
-                <div className="flex justify-between items-end mb-8 border-b pb-6">
-                    <div>
-                        <span className="bg-black text-white px-2 py-1 text-[10px] font-bold rounded">OFFICIAL RECORD</span>
-                        <h1 className="text-4xl font-black mt-2">{caseInfo.crimeNumber}</h1>
-                        <p className="text-gray-500 uppercase tracking-widest text-sm">{caseInfo.policeStation} • {caseInfo.actLaw} Sec {caseInfo.sectionLaw}</p>
-                    </div>
-                    <button onClick={() => window.print()} className="px-6 py-2 bg-gray-900 text-white rounded-lg font-bold text-sm">PRINT ALL TAGS</button>
-                </div>
+            <div className="flex">
+                {/* Sidebar section */}
+                <aside className="hidden md:block w-64 border-r border-gray-100 h-[calc(100vh-64px)] sticky top-16 bg-gray-50/50 print:hidden">
+                    <Sidebar />
+                </aside>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-2">
-                    {caseInfo.properties.map((item: any) => (
-                        <div key={item.id} className="border-2 border-black p-4 flex gap-4 bg-white rounded-lg">
-                            <div className="flex-shrink-0">
-                                <img src={item.qrCodeImage} alt="QR" className="w-24 h-24 border p-1" />
-                                <p className="text-[8px] font-mono text-center mt-1">{item.qrString}</p>
+                {/* Main content section */}
+                <main className="flex-1">
+                    <div className="max-w-5xl mx-auto p-6">
+                        <header className="flex justify-between items-end mb-8 border-b border-gray-100 pb-8">
+                            <div>
+                                <span className="bg-gray-900 text-white px-3 py-1 text-[10px] font-black rounded uppercase tracking-widest">Official Record</span>
+                                <h1 className="text-4xl font-black mt-3 text-gray-900 tracking-tighter uppercase">{caseInfo.crimeNumber}</h1>
+                                <p className="text-gray-500 uppercase tracking-widest text-xs font-bold mt-1">
+                                    {caseInfo.policeStation} • {caseInfo.actLaw} Sec {caseInfo.sectionLaw}
+                                </p>
                             </div>
-                            <div className="flex-grow flex flex-col justify-between">
-                                <div>
-                                    <h3 className="font-bold text-lg leading-tight">{item.description}</h3>
-                                    <p className="text-xs text-gray-600">Category: {item.category}</p>
-                                    <p className="text-xs font-bold mt-1">LOC: {item.location}</p>
+                            <button 
+                                onClick={() => window.print()} 
+                                className="px-6 py-3 bg-gray-900 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-black transition print:hidden"
+                            >
+                                Print Property Tags
+                            </button>
+                        </header>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2">
+                            {caseInfo.properties.map((item: any) => (
+                                <div key={item.id} className="border-2 border-gray-900 p-5 flex gap-5 bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex-shrink-0 flex flex-col items-center">
+                                        <div className="p-2 border border-gray-100 rounded-xl bg-white">
+                                            <img src={item.qrCodeImage} alt="QR" className="w-24 h-24" />
+                                        </div>
+                                        <p className="text-[9px] font-mono font-bold text-gray-400 text-center mt-2 uppercase">{item.qrString.slice(0, 15)}...</p>
+                                    </div>
+                                    <div className="flex-grow flex flex-col justify-between">
+                                        <div>
+                                            <h3 className="font-black text-xl leading-tight text-gray-900 uppercase tracking-tighter">{item.description}</h3>
+                                            <div className="mt-2 space-y-1">
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Category: <span className="text-gray-700">{item.category}</span></p>
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Location: <span className="text-gray-700">{item.location}</span></p>
+                                            </div>
+                                        </div>
+                                        <div className="border-t border-gray-100 pt-3 mt-4">
+                                            <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">{caseInfo.crimeNumber}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="border-t pt-1 mt-2">
-                                    <p className="text-[10px] font-bold uppercase">{caseInfo.crimeNumber}</p>
-                                </div>
-                            </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
+
+                        {caseInfo.properties.length === 0 && (
+                            <div className="text-center py-20 border-2 border-dashed border-gray-100 rounded-3xl">
+                                <p className="text-gray-400 font-bold">No property items linked to this case file.</p>
+                            </div>
+                        )}
+                    </div>
+                </main>
             </div>
         </div>
     );
