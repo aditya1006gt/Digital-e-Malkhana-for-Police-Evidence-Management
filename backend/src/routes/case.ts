@@ -145,7 +145,14 @@ router.post("/scan/:qrString", authMiddleware, async (req, res) => {
         // 1. Find the property
         const property = await prisma.property.findUnique({
             where: { qrString },
-            include: { case: true }
+            include: { 
+                case: true,
+                custodyLogs: {
+                    orderBy: {
+                        movedAt: 'desc' // Shows newest movements first
+                    }
+                }
+            }
         });
 
         if (!property) return res.status(404).json({ error: "Invalid QR Code" });
@@ -264,6 +271,104 @@ router.put("/update-qr/:qrString", authMiddleware, async (req, res) => {
             error: "Failed to update property", 
             details: err.message 
         });
+    }
+});
+
+// case.ts - Add this endpoint
+router.get("/analytics-stats", authMiddleware, async (req, res) => {
+    try {
+        const userId = req.userId!;
+
+        // 1. Get counts grouped by category for this specific user
+        const categoryStats = await prisma.property.groupBy({
+            by: ['category'],
+            where: {
+                case: {
+                    userId: userId
+                }
+            },
+            _count: {
+                _all: true
+            }
+        });
+
+        // 2. Format it into a simple object for the frontend
+        // e.g., { ELECTRONICS: 5, WEAPON: 2 }
+        const formattedStats = categoryStats.reduce((acc: any, curr) => {
+            acc[curr.category] = curr._count._all;
+            return acc;
+        }, {});
+
+        return res.json({ categories: formattedStats });
+    } catch (err) {
+        return res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+});
+
+// Validation Schema for Custody Movement
+const custodyMovementSchema = z.object({
+    toOfficer: z.string().min(1),
+    purpose: z.string().min(1),
+    remarks: z.string().optional(),
+    newLocation: z.string().min(1), // Every move usually changes physical location
+});
+
+// 6. Log Property Movement (Chain of Custody)
+router.post("/property/:id/move", authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params; // Property ID
+        const userId = req.userId!;
+        const validation = custodyMovementSchema.safeParse(req.body);
+
+        if (!validation.success) {
+            return res.status(400).json({ error: "Invalid movement data", details: validation.error.issues });
+        }
+
+        if (!id) {
+            return res.status(400).json({ error: "Property ID is required" });
+        }
+
+        const { toOfficer, purpose, remarks, newLocation } = validation.data;
+
+        // Fetch property and current officer/location
+        const property = await prisma.property.findUnique({
+            where: { id },
+            include: { case: { select: { ioName: true } } }
+        });
+
+        if (!property) return res.status(404).json({ error: "Property record not found" });
+
+        // Perform move inside a Transaction
+        const updatedLog = await prisma.$transaction(async (tx) => {
+            // 1. Create the Custody Log entry
+            const log = await tx.custodyLog.create({
+                data: {
+                    propertyId: id,
+                    fromOfficer: property.case.ioName, // Or fetch the last 'toOfficer' from logs
+                    toOfficer,
+                    purpose,
+                    remarks: remarks ?? null,
+                    movedAt: new Date(),
+                }
+            });
+
+            // 2. Update the Property's current location field
+            await tx.property.update({
+                where: { id },
+                data: { location: newLocation }
+            });
+
+            return log;
+        });
+
+        return res.json({ 
+            message: "Movement recorded in Chain of Custody", 
+            log: updatedLog 
+        });
+
+    } catch (err) {
+        console.error("CoC Error:", err);
+        return res.status(500).json({ error: "Failed to log movement" });
     }
 });
 export default router;

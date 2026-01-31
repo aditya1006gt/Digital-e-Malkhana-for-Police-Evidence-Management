@@ -3,14 +3,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { URL } from "../config";
 import { AppBar } from "../components/AppBar";
-import { InputBox } from "../components/InputBox";
-import { Button } from "../components/Button";
-import { Sidebar } from "../components/SideBar"; // Added Sidebar import
+import { Sidebar } from "../components/SideBar";
+import { MovementModal } from "../components/MovementModal";
 
 export const PropertyInfo = () => {
     const { qrString } = useParams();
     const [property, setProperty] = useState<any>(null);
-    const [logText, setLogText] = useState("");
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -21,17 +20,16 @@ export const PropertyInfo = () => {
             setProperty(res.data.property);
         })
         .catch(err => {
-            console.error("Authentication or Scan error:", err.response?.data);
+            console.error("Scan error:", err.response?.data);
             if (err.response?.status === 401) navigate("/signin");
         });
     }, [qrString, navigate]);
 
-    // Consistent Loading State with Sidebar
     if (!property) return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-white flex flex-col">
             <AppBar />
-            <div className="flex">
-                <aside className="hidden md:block w-64 border-r border-gray-100 h-[calc(100vh-64px)] sticky top-16 bg-gray-50/50">
+            <div className="flex flex-1">
+                <aside className="hidden md:block w-64 border-r border-gray-100 bg-gray-50/50">
                     <Sidebar />
                 </aside>
                 <main className="flex-1 flex items-center justify-center font-black text-xs tracking-[0.3em] text-gray-400">
@@ -45,37 +43,33 @@ export const PropertyInfo = () => {
         <div className="min-h-screen bg-white text-gray-900">
             <AppBar />
             <div className="flex">
-                {/* Sidebar section */}
                 <aside className="hidden md:block w-64 border-r border-gray-100 h-[calc(100vh-64px)] sticky top-16 bg-gray-50/50">
                     <Sidebar />
                 </aside>
 
-                {/* Main content section */}
                 <main className="flex-1 p-6 md:p-10 bg-gray-50/30">
                     <div className="max-w-3xl mx-auto">
                         
-                        {/* Evidence Header Card */}
+                        {/* Evidence Header */}
                         <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm mb-8">
                             <div className="bg-gray-900 text-white p-8">
                                 <div className="flex justify-between items-start mb-4">
                                     <p className="text-[10px] font-mono opacity-60 tracking-widest uppercase">{property.qrString}</p>
-                                    <span className="bg-emerald-500 text-gray-900 px-3 py-1 rounded-full font-black uppercase text-[10px] tracking-tighter">
-                                        In Custody
+                                    <span className={`px-3 py-1 rounded-full font-black uppercase text-[10px] tracking-tighter ${property.status === 'IN_CUSTODY' ? 'bg-emerald-500 text-gray-900' : 'bg-red-500 text-white'}`}>
+                                        {property.status === 'IN_CUSTODY' ? 'In Custody' : 'Disposed'}
                                     </span>
                                 </div>
                                 <h1 className="text-4xl font-black tracking-tight uppercase">{property.description}</h1>
-                                <p className="mt-2 text-gray-400 text-sm font-medium">Internal Property Record</p>
                             </div>
 
-                            {/* Property Details Grid */}
-                            <div className="p-8 grid grid-cols-2 gap-8 border-b border-gray-100">
+                            <div className="p-8 grid grid-cols-2 gap-8 border-b border-gray-100 bg-white">
                                 <div>
-                                    <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Current Location</p>
+                                    <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Current Physical Location</p>
                                     <p className="font-bold text-lg text-gray-800">{property.location}</p>
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Linked Case File</p>
-                                    <p className="font-bold text-lg text-blue-600 underline decoration-2 underline-offset-4 cursor-pointer">
+                                    <p className="font-bold text-lg text-blue-600 underline decoration-2 underline-offset-4">
                                         {property.case?.crimeNumber}
                                     </p>
                                 </div>
@@ -83,55 +77,84 @@ export const PropertyInfo = () => {
 
                             {/* Audit Trail Section */}
                             <div className="p-8">
-                                <h3 className="font-black text-xs uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-gray-900 rounded-full"></div>
-                                    MOVEMENT AUDIT TRAIL
-                                </h3>
-                                
-                                <div className="space-y-6">
-                                    <div className="border-l-4 border-gray-900 pl-6 py-1 relative">
-                                        <div className="absolute -left-[7px] top-0 w-3 h-3 bg-gray-900 rounded-full border-2 border-white"></div>
-                                        <p className="text-sm font-black text-gray-900 uppercase">Property Registered</p>
-                                        <p className="text-xs text-gray-500 mt-1 font-medium">
-                                            Officer: {property.case?.ioName} • Station: {property.case?.policeStation}
-                                        </p>
-                                    </div>
-                                    {/* You can map additional logs here in the future */}
+                                <div className="flex justify-between items-center mb-10">
+                                    <h3 className="font-black text-xs uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                                        Chain of Custody Tracks
+                                    </h3>
+                                    <button 
+                                        onClick={() => setIsModalOpen(true)}
+                                        className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-100"
+                                    >
+                                        + Authorize Handover
+                                    </button>
                                 </div>
                                 
-                                {/* Status Update Area */}
-                                <div className="mt-12 pt-8 border-t border-gray-100">
-                                    <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Official Status Remark</p>
-                                        <div className="space-y-4">
-                                            <InputBox 
-                                                label="" 
-                                                placeholder="e.g. Sent for Forensic Analysis" 
-                                                value={logText} 
-                                                onChange={(e) => setLogText(e.target.value)} 
-                                            />
-                                            <Button 
-                                                label="Log Custody Movement" 
-                                                onPress={() => alert("Digital signature recorded officially.")} 
-                                            />
+                                <div className="space-y-10">
+                                    {/* Active Movement Logs */}
+                                    {property.custodyLogs?.map((log: any) => (
+                                        <div key={log.id} className="border-l-4 border-blue-600 pl-8 py-1 relative">
+                                            <div className="absolute -left-[9px] top-0 w-4 h-4 bg-blue-600 rounded-full border-4 border-white shadow-sm"></div>
+                                            
+                                            <div className="flex flex-wrap items-center gap-3 mb-2">
+                                                <p className="text-sm font-black text-gray-900 uppercase">Movement: {log.purpose}</p>
+                                                <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-black uppercase">Verified</span>
+                                            </div>
+
+                                            {/* Location Tracks logic */}
+                                            <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100 w-fit">
+                                                <div className="text-center px-2">
+                                                    <p className="text-[8px] font-black text-gray-400 uppercase">From</p>
+                                                    <p className="text-xs font-bold text-gray-600">{log.fromOfficer || "Malkhana"}</p>
+                                                </div>
+                                                <div className="h-4 w-[1px] bg-gray-200"></div>
+                                                <div className="text-center px-2">
+                                                    <p className="text-[8px] font-black text-blue-400 uppercase">To Recipient</p>
+                                                    <p className="text-xs font-bold text-blue-700">{log.toOfficer}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-3 flex items-center gap-4 text-[10px] font-medium text-gray-400">
+                                                <span>{new Date(log.movedAt).toLocaleString()}</span>
+                                                <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                                                <span className="italic">Remarks: {log.remarks || "No additional notes"}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {/* Initial Registration - Grayed Out (The Root) */}
+                                    <div className="border-l-4 border-gray-800 pl-8 py-1 relative opacity-50">
+                                        <div className="absolute -left-[9px] top-0 w-4 h-4 bg-gray-800 rounded-full border-4 border-white"></div>
+                                        <p className="text-sm font-black text-gray-600 uppercase">Initial Registration (Malkhana Entry)</p>
+                                        <div className="mt-2 flex items-center gap-4 text-[10px] font-medium text-gray-600">
+                                            <span>Officer: {property.case?.ioName}</span>
+                                            <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
+                                            <span>Station: {property.case?.policeStation}</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Back Navigation */}
-                        <div className="text-center">
+                        <div className="text-center mb-10">
                             <button 
                                 onClick={() => navigate("/dashboard")}
                                 className="text-xs font-black text-gray-400 hover:text-gray-900 transition uppercase tracking-widest"
                             >
-                                ← Back to Registry
+                                ← Back to Case Ledger
                             </button>
                         </div>
                     </div>
                 </main>
             </div>
+
+            {isModalOpen && (
+                <MovementModal
+                    propertyId={property.id} 
+                    onClose={() => setIsModalOpen(false)} 
+                    onSuccess={() => window.location.reload()} 
+                />
+            )}
         </div>
     );
 };
