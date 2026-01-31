@@ -14,6 +14,10 @@ export function EditProfile() {
   const [aboutUs, setAboutUs] = useState<string>("");
   const navigate = useNavigate();
   const [showAlert, setShowAlert] = useState(false);
+  useEffect(() => {
+      if (!localStorage.getItem("token")) {
+      navigate("/");
+  }}, []);
 
   useEffect(() => {
     async function fetchUser() {

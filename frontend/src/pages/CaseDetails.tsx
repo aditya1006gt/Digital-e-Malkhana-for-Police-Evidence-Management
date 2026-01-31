@@ -33,6 +33,11 @@ export const CaseDetails = () => {
     const [caseInfo, setCaseInfo] = useState<CaseRecord | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
+
+    useEffect(() => {
+        if (!localStorage.getItem("token")) {
+        navigate("/");
+    }}, []);
     
     // Edit Form State
     const [formData, setFormData] = useState({

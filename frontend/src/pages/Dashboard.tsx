@@ -4,18 +4,19 @@ import { CaseTable } from "../components/CaseTable";
 import { Footer } from "../components/Footer";
 import { useCases } from "../hooks/useCases";
 import Loader from "../components/Loader";
-
 import { Sidebar } from "../components/SideBar";
 import { StatsCard } from "../components/StatsCards";
+import { useEffect, useState } from "react";
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { cases, loading, stats } = useCases();
 
-  if (!localStorage.getItem("token")) {
-    navigate("/signin");
-    return null;
-  }
+  useEffect(() => {
+    if (!localStorage.getItem("token")) {
+      navigate("/");
+  }}, []);
+  
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -46,7 +47,7 @@ export function Dashboard() {
           {/* Stats Overview - Using the gray-50 card style from CreateCase */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <StatsCard title="Total Cases" value={stats?.totalCases || 0} icon="📁" color="blue" />
-            <StatsCard title="Items in Custody" value={stats?.totalItems || 0} icon="🛡️" color="emerald" />
+            <StatsCard title="Items in Custody" value={stats?.totalItems || 0} icon="🏷️" color="emerald" />
             <StatsCard title="Pending Disposal" value={stats?.pendingDisposal || 0} icon="⏳" color="amber" />
           </div>
 

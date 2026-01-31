@@ -1,7 +1,14 @@
+import { useEffect } from "react";
 import { AppBar } from "../components/AppBar";
 import { Footer } from "../components/Footer";
+import { useNavigate } from "react-router-dom";
 
 export default function Privacy() {
+  const navigate = useNavigate();
+  useEffect(() => {
+      if (!localStorage.getItem("token")) {
+      navigate("/");
+  }}, []);
   return (
     <div className="min-h-screen flex flex-col bg-gray-950 text-gray-200">
       {/* Top App Bar */}

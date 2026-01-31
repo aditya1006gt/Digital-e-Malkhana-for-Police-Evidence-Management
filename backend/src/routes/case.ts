@@ -371,4 +371,175 @@ router.post("/property/:id/move", authMiddleware, async (req, res) => {
         return res.status(500).json({ error: "Failed to log movement" });
     }
 });
+
+// Validation for Disposal
+const disposalSchema = z.object({
+  type: z.enum(["AUCTION", "DESTROYED", "RETURNED", "TRANSFERRED"]),
+  courtOrderRef: z.string().min(1, "Court order reference is required"),
+  dateOfDisposal: z.coerce.date(),
+  remarks: z.string().optional(),
+});
+router.post("/property/:id/dispose",authMiddleware, async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({ error: "Property ID is required" });
+      }
+
+      // Validate body
+      const parsed = disposalSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.issues });
+      }
+
+      const { type, courtOrderRef, dateOfDisposal, remarks } = parsed.data;
+
+      // 1. Ensure property exists and is not already disposed
+      const property = await prisma.property.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          status: true,
+          caseId: true,
+        },
+      });
+
+      if (!property) {
+        return res.status(404).json({ error: "Property not found" });
+      }
+
+      if (property.status === "DISPOSED") {
+        return res.status(400).json({ error: "Property already disposed" });
+      }
+
+      // 2. Ensure disposal record does not already exist (idempotency)
+      const existingDisposal = await prisma.disposal.findUnique({
+        where: { propertyId: id },
+      });
+
+      if (existingDisposal) {
+        return res.status(400).json({ error: "Disposal already recorded" });
+      }
+
+      // 3. Create disposal record
+      const disposal = await prisma.disposal.create({
+        data: {
+          propertyId: id,
+          type,
+          courtOrderRef,
+          disposedAt: dateOfDisposal,
+          remarks: remarks ?? null,
+        },
+      });
+
+      // 4. Update property status
+      await prisma.property.update({
+        where: { id },
+        data: {
+          status: "DISPOSED",
+        },
+      });
+
+      // 5. Check if any active properties remain in the case
+      const remainingActive = await prisma.property.count({
+        where: {
+          caseId: property.caseId,
+          status: "IN_CUSTODY",
+        },
+      });
+
+      // 6. If none remain, close the case
+      if (remainingActive === 0) {
+        await prisma.caseRecord.update({
+          where: { id: property.caseId },
+          data: { status: "DISPOSED" },
+        });
+      }
+
+      return res.json({
+        message: "Disposal recorded successfully",
+        disposal,
+      });
+    } catch (err) {
+      console.error("DISPOSAL ERROR:", err);
+      return res.status(500).json({
+        error: "Failed to process disposal",
+      });
+    }
+  }
+);
+
+router.get("/properties/all", authMiddleware, async (req, res) => {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        const properties = await prisma.property.findMany({
+            where: {
+                case: {
+                    userId: userId // Only fetch properties linked to cases created by this user
+                }
+            },
+            include: {
+                case: {
+                    select: {
+                        crimeNumber: true,
+                        policeStation: true
+                    }
+                },
+                disposal: true // This provides type (AUCTION, etc.), courtOrderRef, and date
+            },
+            orderBy: {
+                // Since Property doesn't have createdAt, we order by status to 
+                // keep IN_CUSTODY items at the top
+                status: 'asc' 
+            }
+        });
+
+        return res.json({ properties });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Failed to fetch property registry" });
+    }
+});
+
+router.get("/dashboard-stats", authMiddleware, async (req, res) => {
+    try {
+        const userId = req.userId!;
+
+        // 1. Total Cases for this user
+        const totalCases = await prisma.caseRecord.count({
+            where: { userId }
+        });
+
+        // 2. Total Items currently "IN_CUSTODY" for this user
+        const inCustodyCount = await prisma.property.count({
+            where: {
+                case: { userId },
+                status: "IN_CUSTODY"
+            }
+        });
+
+        // 3. Items marked for "DISPOSAL" (You can define this as IN_CUSTODY items 
+        // that are older than a certain date, or simply items in custody)
+        // For now, let's define it as items in custody that need attention
+        const pendingDisposal = await prisma.property.count({
+            where: {
+                case: { userId },
+                status: "IN_CUSTODY"
+            }
+        });
+
+        return res.json({
+            totalCases,
+            totalItems: inCustodyCount,
+            pendingDisposal: pendingDisposal,
+            stationId: "STN-" + userId.slice(0, 4).toUpperCase() // Placeholder
+        });
+    } catch (err) {
+        return res.status(500).json({ error: "Failed to fetch dashboard stats" });
+    }
+});
+
 export default router;

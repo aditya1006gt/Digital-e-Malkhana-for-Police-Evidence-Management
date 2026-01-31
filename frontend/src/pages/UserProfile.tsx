@@ -37,6 +37,10 @@ export function UserProfile() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isPicModalOpen, setIsPicModalOpen] = useState(false);
   const navigate = useNavigate();
+  useEffect(() => {
+      if (!localStorage.getItem("token")) {
+      navigate("/");
+  }}, []);
 
   async function refreshUser() {
     try {

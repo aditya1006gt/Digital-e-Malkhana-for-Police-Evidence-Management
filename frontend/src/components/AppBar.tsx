@@ -19,6 +19,7 @@ export function AppBar() {
       label: "Logout System",
       action: () => {
         localStorage.removeItem("token");
+        localStorage.removeItem("userId");
         navigate("/");
       },
     },

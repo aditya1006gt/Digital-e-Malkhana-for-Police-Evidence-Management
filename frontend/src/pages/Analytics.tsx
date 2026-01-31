@@ -3,11 +3,18 @@ import axios from "axios";
 import { URL } from "../config";
 import { AppBar } from "../components/AppBar";
 import { Sidebar } from "../components/SideBar";
+import { useNavigate } from "react-router-dom";
 
 export const Analytics = () => {
     const [stats, setStats] = useState<any>(null);
     const [categoryData, setCategoryData] = useState<any>({});
     const [loading, setLoading] = useState(true);
+
+    const navigate = useNavigate();
+    useEffect(() => {
+        if (!localStorage.getItem("token")) {
+        navigate("/");
+    }}, []);
 
     useEffect(() => {
         const fetchData = async () => {

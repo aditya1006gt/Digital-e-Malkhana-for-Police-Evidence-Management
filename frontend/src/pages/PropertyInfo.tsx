@@ -5,12 +5,18 @@ import { URL } from "../config";
 import { AppBar } from "../components/AppBar";
 import { Sidebar } from "../components/SideBar";
 import { MovementModal } from "../components/MovementModal";
+import { DisposalModal } from "../components/DisposalModal"; // Ensure you create this component
 
 export const PropertyInfo = () => {
     const { qrString } = useParams();
     const [property, setProperty] = useState<any>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDisposalOpen, setIsDisposalOpen] = useState(false);
     const navigate = useNavigate();
+    useEffect(() => {
+        if (!localStorage.getItem("token")) {
+        navigate("/");
+    }}, []);
 
     useEffect(() => {
         axios.post(`${URL}/api/v1/case/scan/${qrString}`, {}, {
@@ -21,7 +27,7 @@ export const PropertyInfo = () => {
         })
         .catch(err => {
             console.error("Scan error:", err.response?.data);
-            if (err.response?.status === 401) navigate("/signin");
+            if (err.response?.status === 401) navigate("/");
         });
     }, [qrString, navigate]);
 
@@ -52,14 +58,17 @@ export const PropertyInfo = () => {
                         
                         {/* Evidence Header */}
                         <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm mb-8">
-                            <div className="bg-gray-900 text-white p-8">
+                            <div className={`p-8 text-white transition-colors duration-500 ${property.status === 'IN_CUSTODY' ? 'bg-gray-900' : 'bg-red-700'}`}>
                                 <div className="flex justify-between items-start mb-4">
                                     <p className="text-[10px] font-mono opacity-60 tracking-widest uppercase">{property.qrString}</p>
-                                    <span className={`px-3 py-1 rounded-full font-black uppercase text-[10px] tracking-tighter ${property.status === 'IN_CUSTODY' ? 'bg-emerald-500 text-gray-900' : 'bg-red-500 text-white'}`}>
+                                    <span className={`px-3 py-1 rounded-full font-black uppercase text-[10px] tracking-tighter ${property.status === 'IN_CUSTODY' ? 'bg-emerald-500 text-gray-900' : 'bg-white text-red-700'}`}>
                                         {property.status === 'IN_CUSTODY' ? 'In Custody' : 'Disposed'}
                                     </span>
                                 </div>
                                 <h1 className="text-4xl font-black tracking-tight uppercase">{property.description}</h1>
+                                {property.status === 'DISPOSED' && (
+                                    <p className="mt-2 text-red-200 text-[10px] font-black uppercase tracking-[0.2em]">Closed Record • Terminated from Malkhana</p>
+                                )}
                             </div>
 
                             <div className="p-8 grid grid-cols-2 gap-8 border-b border-gray-100 bg-white">
@@ -79,18 +88,48 @@ export const PropertyInfo = () => {
                             <div className="p-8">
                                 <div className="flex justify-between items-center mb-10">
                                     <h3 className="font-black text-xs uppercase tracking-widest text-gray-400 flex items-center gap-2">
-                                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                                        <div className={`w-2 h-2 rounded-full ${property.status === 'IN_CUSTODY' ? 'bg-blue-600 animate-pulse' : 'bg-red-600'}`}></div>
                                         Chain of Custody Tracks
                                     </h3>
-                                    <button 
-                                        onClick={() => setIsModalOpen(true)}
-                                        className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-100"
-                                    >
-                                        + Authorize Handover
-                                    </button>
+                                    
+                                    <div className="flex gap-2">
+                                        {property.status === 'IN_CUSTODY' && (
+                                            <>
+                                                <button 
+                                                    onClick={() => setIsModalOpen(true)}
+                                                    className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-100"
+                                                >
+                                                    + Authorize Handover
+                                                </button>
+                                                <button 
+                                                    onClick={() => setIsDisposalOpen(true)}
+                                                    className="bg-red-50 text-red-600 border border-red-100 px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition"
+                                                >
+                                                    Dispose
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                                 
                                 <div className="space-y-10">
+                                    {/* Disposal Event (If exists) */}
+                                    {property.disposal && (
+                                        <div className="border-l-4 border-red-600 pl-8 py-1 relative">
+                                            <div className="absolute -left-[9px] top-0 w-4 h-4 bg-red-600 rounded-full border-4 border-white shadow-sm"></div>
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <p className="text-sm font-black text-red-700 uppercase">FINAL DISPOSAL: {property.disposal.type}</p>
+                                            </div>
+                                            <div className="bg-red-50 p-3 rounded-xl border border-red-100 w-fit">
+                                                <p className="text-[10px] font-bold text-red-800">Order Ref: {property.disposal.courtOrderRef}</p>
+                                                <p className="text-[10px] text-red-600 mt-1">{property.disposal.remarks}</p>
+                                            </div>
+                                            <p className="mt-2 text-[10px] font-medium text-gray-400">
+                                                {new Date(property.disposal.disposedAt).toLocaleString()}
+                                            </p>
+                                        </div>
+                                    )}
+
                                     {/* Active Movement Logs */}
                                     {property.custodyLogs?.map((log: any) => (
                                         <div key={log.id} className="border-l-4 border-blue-600 pl-8 py-1 relative">
@@ -101,7 +140,6 @@ export const PropertyInfo = () => {
                                                 <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-black uppercase">Verified</span>
                                             </div>
 
-                                            {/* Location Tracks logic */}
                                             <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100 w-fit">
                                                 <div className="text-center px-2">
                                                     <p className="text-[8px] font-black text-gray-400 uppercase">From</p>
@@ -148,11 +186,20 @@ export const PropertyInfo = () => {
                 </main>
             </div>
 
+            {/* Modals */}
             {isModalOpen && (
                 <MovementModal
                     propertyId={property.id} 
                     onClose={() => setIsModalOpen(false)} 
                     onSuccess={() => window.location.reload()} 
+                />
+            )}
+
+            {isDisposalOpen && (
+                <DisposalModal
+                    propertyId={property.id}
+                    onClose={() => setIsDisposalOpen(false)}
+                    onSuccess={() => window.location.reload()}
                 />
             )}
         </div>

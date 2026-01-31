@@ -45,6 +45,7 @@ export const Sidebar = () => {
         <div 
           onClick={() => {
             localStorage.removeItem("token");
+            localStorage.removeItem("userId");
             navigate("/");
           }}
           className="flex items-center gap-3 text-sm font-medium text-red-400 hover:text-red-300 cursor-pointer"

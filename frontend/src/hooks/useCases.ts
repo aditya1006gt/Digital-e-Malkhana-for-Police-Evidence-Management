@@ -1,3 +1,4 @@
+// hooks/useCases.ts
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { URL } from "../config";
@@ -15,32 +16,17 @@ export const useCases = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch user info for stationId and stats
-                const userRes = await axios.get(`${URL}/api/v1/user/info`, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-                });
-
-                // Fetch all cases assigned to the user
-                const casesRes = await axios.get(`${URL}/api/v1/case/my-cases`, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-                });
-
-                const fetchedCases = casesRes.data.cases || [];
-                setCases(fetchedCases);
-
-                // Calculate stats based on fetched data
-                const totalItems = fetchedCases.reduce((acc: number, curr: any) => acc + (curr.properties?.length || 0), 0);
+                const token = localStorage.getItem("token");
+                const [casesRes, statsRes] = await Promise.all([
+                    axios.get(`${URL}/api/v1/case/my-cases`, { headers: { Authorization: `Bearer ${token}` } }),
+                    axios.get(`${URL}/api/v1/case/dashboard-stats`, { headers: { Authorization: `Bearer ${token}` } })
+                ]);
                 
-                setStats({
-                    totalCases: fetchedCases.length,
-                    totalItems: totalItems,
-                    pendingDisposal: Math.floor(totalItems * 0.1), // Placeholder logic
-                    stationId: userRes.data.user.stationId
-                });
-
-                setLoading(false);
+                setCases(casesRes.data.cases);
+                setStats(statsRes.data);
             } catch (e) {
                 console.error("Error fetching dashboard data", e);
+            } finally {
                 setLoading(false);
             }
         };
@@ -48,5 +34,5 @@ export const useCases = () => {
         fetchData();
     }, []);
 
-    return { loading, cases, stats };
+    return { cases, loading, stats };
 };
