@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  username    String   @unique
+  password    String
+  firstname   String
+  lastname    String
+  rank        String
+  stationId   String
+  role        Role     @default(OFFICER)
+  createdAt   DateTime @default(now())
+  profilepic  String?  @default("https://www.gravatar.com/avatar/0000000000000000000000000000000?d=mp&f=y")
+  cases       Case[]
+}
+
+enum Role {
+  ADMIN
+  OFFICER
+}
+
+model Case {
+  id            String      @id @default(uuid())
+  policeStation String
+  ioName        String
+  ioId          String
+  crimeNumber   String      // e.g., "FIR-2023-001"
+  crimeYear     Int
+  firDate       DateTime
+  seizureDate   DateTime
+  actLaw        String
+  sectionLaw    String
+  status        CaseStatus  @default(PENDING)
+  createdAt     DateTime    @default(now())
+  
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  properties    Property[]
+}
+
+enum CaseStatus {
+  PENDING
+  DISPOSED
+}
+
+model Property {
+  id          String    @id @default(uuid())
+  category    Category  // e.g., Electronics, Weapon
+  belongingTo OwnerType    // Accused/Complainant
+  nature      SeizureNature    // Recovered/Seized
+  quantity    Int
+  location    String    // Rack 1, Room B
+  description String
+  photoUrl    String?
+  
+  // This stores the Base64 Data URI of the QR Code image
+  qrCodeImage String?   
+  
+  // This is the unique string embedded inside the QR
+  qrString    String    @unique 
+
+  status      PropStatus @default(IN_CUSTODY)
+  
+  caseId      String
+  case        Case      @relation(fields: [caseId], references: [id])
+  
+  custodyLogs CustodyLog[]
+  disposal    Disposal?
+}
+
+enum SeizureNature {
+  RECOVERED
+  SEIZED
+  ABANDONED
+}
+
+enum OwnerType {
+  ACCUSED
+  COMPLAINANT
+  VICTIM
+  UNKNOWN
+}
+
+enum Category {
+  ELECTRONICS
+  WEAPON
+  VEHICLE
+  CASH
+  NARCOTICS
+  DOCUMENTS
+  OTHER
+}
+
+enum PropStatus {
+  IN_CUSTODY
+  DISPOSED
+}
+
+model CustodyLog {
+  id         String   @id @default(uuid())
+  fromOfficer String
+  toOfficer   String
+  purpose     String   // Court, FSL, Storage
+  remarks     String?
+  movedAt     DateTime @default(now())
+  
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id])
+}
+
+model Disposal {
+  id            String   @id @default(uuid())
+  type          DisposalType   // Auction, Destroyed, Returned
+  courtOrderRef String
+  disposedAt    DateTime
+  remarks       String?
+  
+  propertyId    String   @unique
+  property      Property @relation(fields: [propertyId], references: [id])
+}
+
+enum DisposalType {
+  AUCTION
+  DESTROYED
+  RETURNED
+  TRANSFERRED
+}
