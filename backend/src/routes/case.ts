@@ -2,6 +2,8 @@ import express from "express";
 import { prisma } from "../lib/prisma.js";
 import authMiddleware from "../middleware.js";
 import { z } from "zod";
+import { v4 as uuidv4 } from "uuid"; // Correct way to import uuid
+import QRCode from "qrcode";        // Add this line
 
 const router = express.Router();
 
@@ -13,10 +15,8 @@ const propertySchema = z.object({
     quantity: z.number().int().positive(),
     location: z.string().min(1),
     description: z.string().min(1),
-    qrString: z.string().min(1), // Unique ID for the QR code
     photoUrl: z.string().url().optional(),
 });
-
 const createCaseSchema = z.object({
     policeStation: z.string().min(1),
     ioName: z.string().min(1),
@@ -33,68 +33,49 @@ const createCaseSchema = z.object({
 router.post("/create", authMiddleware, async (req, res) => {
     try {
         const validation = createCaseSchema.safeParse(req.body);
-        if (!validation.success) {
-            return res.status(400).json({ error: "Invalid inputs", details: validation.error.issues });
-        }
+        if (!validation.success) return res.status(400).json({ error: "Invalid inputs", details: validation.error.issues });
 
         const userId = req.userId!;
-        const { 
-            policeStation, ioName, ioId , crimeYear, 
-            firDate, seizureDate, actLaw, sectionLaw, properties 
-        } = req.body;
+        const { policeStation, ioName, ioId, crimeYear, firDate, seizureDate, actLaw, sectionLaw, properties } = req.body;
 
-        // Use a transaction to ensure both Case and Properties are created together
-        const newCase = await prisma.$transaction(async (tx:any) => {
-            // 1. Find the latest case for this year to determine the next serial number
-            const lastCase = await tx.caseRecord.findFirst({
-                where: { crimeYear: crimeYear },
-                orderBy: { createdAt: 'desc' }
-            });
+        // 1. Generate QR Codes
+        const propertiesWithQR = await Promise.all((properties || []).map(async (p: any) => {
+            const token = `PROP-${uuidv4()}`;
+            const qr = await QRCode.toDataURL(token);
+            return { ...p, qrString: token, qrCodeImage: qr };
+        }));
 
-            // 2. Generate the next number (e.g., FIR-2026-001)
-            let nextSequence = 1;
-            if (lastCase && lastCase.crimeNumber) {
-                const parts = lastCase.crimeNumber.split('-');
-                const lastNum = parseInt(parts[parts.length - 1]);
-                if (!isNaN(lastNum)) nextSequence = lastNum + 1;
-            }
-            
-            const autoCrimeNumber = `FIR-${crimeYear}-${nextSequence.toString().padStart(3, '0')}`;
-
-            return await tx.caseRecord.create({
-                data: {
-                    policeStation,
-                    ioName,
-                    ioId,
-                    crimeNumber: autoCrimeNumber, // Use the generated number
-                    crimeYear,
-                    firDate: new Date(firDate),
-                    seizureDate: new Date(seizureDate),
-                    actLaw,
-                    sectionLaw,
-                    userId,
-                    // If properties are provided, create them linked to this case
-                    properties: {
-                        create: properties?.map((p: any) => ({
-                            ...p,
-                        }))
-                    }
-                },
-                include: {
-                    properties: true
-                }
-            });
+        // 2. Find Serial Number (Standard query)
+        const lastCase = await prisma.caseRecord.findFirst({
+            where: { crimeYear },
+            orderBy: { createdAt: 'desc' }
         });
 
-        return res.status(201).json({
-            message: "Case and properties registered successfully",
-            case: newCase
-        });
-    } catch (err: any) {
-        if (err.code === 'P2002') {
-            return res.status(409).json({ error: "Property with this QR String already exists" });
+        let nextSequence = 1;
+        if (lastCase?.crimeNumber) {
+            const parts = lastCase.crimeNumber.split('-');
+            const lastNum = parseInt(parts[parts.length - 1] ?? '0', 10);
+            if (!isNaN(lastNum)) nextSequence = lastNum + 1;
         }
-        return res.status(500).json({ error: "Server error during case creation" });
+        const autoCrimeNumber = `FIR-${crimeYear}-${nextSequence.toString().padStart(3, '0')}`;
+
+        // 3. Create Case and Properties (Standard create)
+        const newCase = await prisma.caseRecord.create({
+            data: {
+                policeStation, ioName, ioId, crimeNumber: autoCrimeNumber,
+                crimeYear, actLaw, sectionLaw, userId,
+                firDate: new Date(firDate),
+                seizureDate: new Date(seizureDate),
+                properties: { create: propertiesWithQR }
+            },
+            include: { properties: true }
+        });
+
+        return res.status(201).json({ message: "Registered successfully", case: newCase });
+
+    } catch (err: any) {
+        console.error("DEBUG ERROR:", err);
+        return res.status(500).json({ error: "DB Connection Error", details: err.message });
     }
 });
 
@@ -152,4 +133,137 @@ router.get("/specific/:id", authMiddleware, async (req, res) => {
     }
 });
 
+
+// 4. Log a Scan Event (When someone scans the physical tag)
+router.post("/scan/:qrString", authMiddleware, async (req, res) => {
+    try {
+        const { qrString } = req.params;
+        const userId = req.userId!;
+
+        if (!qrString) return res.status(400).json({ error: "QR String is required" });
+
+        // 1. Find the property
+        const property = await prisma.property.findUnique({
+            where: { qrString },
+            include: { case: true }
+        });
+
+        if (!property) return res.status(404).json({ error: "Invalid QR Code" });
+
+        // 2. Create the Audit Log (The "Who" and "When")
+        // Note: Ensure you added ScanLog to your Prisma Schema first!
+        await prisma.scanLog.create({
+            data: {
+                userId: userId,
+                propertyId: property.id,
+            }
+        });
+
+        return res.json({ 
+            message: "Scan logged successfully", 
+            property 
+        });
+    } catch (err) {
+        return res.status(500).json({ error: "Failed to log scan" });
+    }
+});
+
+// 5. Update Property Data via QR String
+router.put("/update-qr/:qrString", authMiddleware, async (req, res) => {
+    try {
+        const { qrString } = req.params;
+        const userId = req.userId!;
+
+        if (!qrString) {
+            return res.status(400).json({ error: "QR String is required" });
+        }
+
+        // Validation schema for updating property
+        const updatePropertySchema = z.object({
+            category: z.enum(["ELECTRONICS", "WEAPON", "VEHICLE", "CASH", "NARCOTICS", "DOCUMENTS", "OTHER"]).optional(),
+            belongingTo: z.enum(["ACCUSED", "COMPLAINANT", "VICTIM", "UNKNOWN"]).optional(),
+            nature: z.enum(["RECOVERED", "SEIZED", "ABANDONED"]).optional(),
+            quantity: z.number().int().positive().optional(),
+            location: z.string().min(1).optional(),
+            description: z.string().min(1).optional(),
+            photoUrl: z.string().url().optional(),
+        });
+
+        const validation = updatePropertySchema.safeParse(req.body);
+        if (!validation.success) {
+            return res.status(400).json({ 
+                error: "Invalid inputs", 
+                details: validation.error.issues 
+            });
+        }
+
+        const { category, belongingTo, nature, quantity, location, description, photoUrl } = validation.data;
+
+        // Create a clean object by only including keys that are NOT undefined
+        const updateData = Object.fromEntries(
+            Object.entries({
+                category,
+                belongingTo,
+                nature,
+                quantity,
+                location,
+                description,
+                photoUrl
+            }).filter(([_, value]) => value !== undefined)
+        );
+
+        // 1. Find the property and verify ownership
+        const property = await prisma.property.findUnique({
+            where: { qrString },
+            include: { case: true }
+        });
+
+        if (!property) {
+            return res.status(404).json({ error: "Property not found" });
+        }
+
+        // 2. Verify that the user owns this case
+        if (property.case.userId !== userId) {
+            return res.status(403).json({ 
+                error: "Unauthorized: You can only update properties from your own cases" 
+            });
+        }
+
+        // 3. Update the property
+        // 3. Update the property using the cleaned data object
+        const updatedProperty = await prisma.property.update({
+            where: { qrString },
+            data: updateData, // No more TypeScript errors here
+            include: {
+                case: {
+                    select: {
+                        crimeNumber: true,
+                        policeStation: true,
+                        ioName: true
+                    }
+                }
+            }
+        });
+
+        // 4. Optional: Log the update action
+        await prisma.scanLog.create({
+            data: {
+                userId: userId,
+                propertyId: property.id,
+            }
+        });
+
+        return res.json({ 
+            message: "Property updated successfully", 
+            property: updatedProperty 
+        });
+
+    } catch (err: any) {
+        console.error("Update QR Error:", err);
+        return res.status(500).json({ 
+            error: "Failed to update property", 
+            details: err.message 
+        });
+    }
+});
 export default router;

@@ -27,6 +27,7 @@ model User {
   createdAt   DateTime @default(now())
   profilepic  String?  @default("https://www.gravatar.com/avatar/0000000000000000000000000000000?d=mp&f=y")
   cases       CaseRecord[]
+  scanLogs    ScanLog[]
 }
 
 enum Role {
@@ -69,7 +70,7 @@ model Property {
   photoUrl    String?
   
   // This stores the Base64 Data URI of the QR Code image
-  qrCodeImage String?   
+  qrCodeImage String?   @db.Text // Text type for long Base64 strings
   
   // This is the unique string embedded inside the QR
   qrString    String    @unique 
@@ -81,6 +82,8 @@ model Property {
   
   custodyLogs CustodyLog[]
   disposal    Disposal?
+
+  scanLogs    ScanLog[]
 }
 
 enum SeizureNature {
@@ -139,4 +142,20 @@ enum DisposalType {
   DESTROYED
   RETURNED
   TRANSFERRED
+}
+
+model ScanLog {
+  id         String   @id @default(uuid())
+  scannedAt  DateTime @default(now())
+  
+  // The person who performed the scan
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  
+  // The property that was scanned
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  // Optional: Capture metadata like GPS or Device ID
+  deviceInfo String?  
 }
