@@ -8,7 +8,7 @@
 
 ### Officer Dashboard
 The central command hub provides a real-time overview of case metrics, items in custody, and pending disposal actions.
-![Dashboard](./images/Screenshot%202026-02-01%20at%2010.41.16%20AM.jpg)
+![Dashboard](./images/1.png)
 
 ---
 
@@ -16,21 +16,21 @@ The central command hub provides a real-time overview of case metrics, items in 
 
 ### 1. Evidence Management (Malkhana Module)
 * **Digital Case Registration:** Register First Information Reports (FIR) with specific legal acts, sections, and investigating officer details.
-![New Case Registration](./images/Screenshot%202026-02-01%20at%2010.42.10%20AM.jpg)
+![New Case Registration](./images/2.png)
 
 * **Evidence Scanner:** Integrated QR-code scanning to instantly verify property tags and view real-time status.
-![Evidence Scanner](./images/Screenshot%202026-02-01%20at%2010.44.00%20AM.jpg)
+![Evidence Scanner](./images/3.png)
 
 * **Disposal Registry:** Legal tracking of property release, destruction, or judicial orders to maintain a clean chain of custody.
-![Disposal Registry](./images/Screenshot%202026-02-01%20at%2010.44.14%20AM.png)
+![Disposal Registry](./images/4.png)
 
 ### 2. Departmental Analytics
 Gain a data-driven overview of station performance, evidence distribution (Narcotics, Weapons, Electronics), and system operational status.
-![Analytics](./images/Screenshot%202026-02-01%20at%2010.46.22%20AM.jpg)
+![Analytics](./images/5.png)
 
 ### 3. Officer Identity & Records
 Digitalized officer profiles manage official identification, station assignments, and individual performance benchmarks.
-![Officer Profile](./images/Screenshot%202026-02-01%20at%2010.46.30%20AM.jpg)
+![Officer Profile](./images/6.png)
 
 ---
 
