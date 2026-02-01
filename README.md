@@ -14,7 +14,7 @@ The central command hub provides a real-time overview of case metrics, items in 
 
 ## 🚀 Key Features
 
-### 1. **Evidence Management (Malkhana Module)**
+### 1. Evidence Management (Malkhana Module)
 * **Digital Case Registration:** Register First Information Reports (FIR) with specific legal acts, sections, and investigating officer details.
 ![New Case Registration](./images/Screenshot%202026-02-01%20at%2010.42.10%20AM.jpg)
 
@@ -24,11 +24,11 @@ The central command hub provides a real-time overview of case metrics, items in 
 * **Disposal Registry:** Legal tracking of property release, destruction, or judicial orders to maintain a clean chain of custody.
 ![Disposal Registry](./images/Screenshot%202026-02-01%20at%2010.44.14%20AM.png)
 
-### 2. **Departmental Analytics**
+### 2. Departmental Analytics
 Gain a data-driven overview of station performance, evidence distribution (Narcotics, Weapons, Electronics), and system operational status.
 ![Analytics](./images/Screenshot%202026-02-01%20at%2010.46.22%20AM.jpg)
 
-### 3. **Officer Identity & Records**
+### 3. Officer Identity & Records
 Digitalized officer profiles manage official identification, station assignments, and individual performance benchmarks.
 ![Officer Profile](./images/Screenshot%202026-02-01%20at%2010.46.30%20AM.jpg)
 
