@@ -1,80 +1,124 @@
 import { useEffect } from "react";
 import { AppBar } from "../components/AppBar";
-import { Footer } from "../components/Footer";
+import { Sidebar } from "../components/SideBar"; // Added Sidebar for layout consistency
 import { useNavigate } from "react-router-dom";
 
 export default function Privacy() {
   const navigate = useNavigate();
+
   useEffect(() => {
-      if (!localStorage.getItem("token")) {
+    if (!localStorage.getItem("token")) {
       navigate("/");
-  }}, []);
+    }
+  }, [navigate]);
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-950 text-gray-200">
-      {/* Top App Bar */}
+    <div className="min-h-screen bg-white flex flex-col h-screen overflow-hidden text-gray-900">
       <AppBar />
 
-      {/* Main content */}
-      <main className="flex-grow flex justify-center items-start pt-24 px-6 pb-12">
-        <div className="w-full max-w-5xl bg-gray-900/60 border border-gray-800 rounded-xl p-10 backdrop-blur-sm space-y-8">
-          <h1 className="text-4xl font-bold text-white mb-4">Privacy Policy</h1>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar consistent with Messages UI */}
+        <aside className="hidden md:block w-64 border-r border-gray-100 bg-gray-50/50">
+          <Sidebar />
+        </aside>
 
-          <p className="text-lg leading-relaxed">
-            Your privacy is important to us. This Privacy Policy explains how Shabd collects, 
-            uses, and protects your information when you access or use the Platform.
-          </p>
+        <main className="flex-1 overflow-y-auto bg-gray-50/30 p-8 md:p-12 custom-scrollbar">
+          <div className="max-w-4xl mx-auto bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+            {/* Header Section */}
+            <div className="bg-gray-900 p-8 text-white">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[10px] font-black tracking-[0.3em] uppercase opacity-60">
+                  Security Protocol
+                </span>
+                <span className="text-[10px] font-black tracking-[0.2em] uppercase bg-blue-600 px-3 py-1 rounded">
+                  Confidential
+                </span>
+              </div>
+              <h1 className="text-3xl font-black uppercase tracking-tighter">
+                Data Privacy & Encryption Policy
+              </h1>
+            </div>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">1. Information Collection</h2>
-          <p className="text-lg leading-relaxed">
-            We collect information you provide when creating an account, publishing content, 
-            or interacting with the Platform. This may include your name, email, profile information, 
-            and content you post.
-          </p>
+            <div className="p-8 md:p-12 space-y-10">
+              <section>
+                <p className="text-sm font-bold leading-relaxed text-gray-600 uppercase tracking-tight italic border-l-4 border-blue-600 pl-4">
+                  This document outlines the handling of sensitive intelligence and 
+                  internal communications within the Secure Line platform. All transmissions 
+                  are subject to internal auditing protocols.
+                </p>
+              </section>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">2. Use of Information</h2>
-          <p className="text-lg leading-relaxed">
-            Your information is used to provide, maintain, and improve the Platform, communicate 
-            with you, and enhance your user experience.
-          </p>
+              {/* Policy Sections */}
+              <div className="grid gap-10">
+                <section>
+                  <h2 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-3">
+                    01. Secure Transmission & Encryption
+                  </h2>
+                  <p className="text-sm font-medium leading-relaxed text-gray-700">
+                    All internal communications are protected via end-to-end encryption. 
+                    Keys are stored locally on officer terminals; the platform server acts 
+                    solely as a relay and does not store plaintext message content.
+                  </p>
+                </section>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">3. Data Sharing</h2>
-          <p className="text-lg leading-relaxed">
-            We do not sell your personal data. Information may be shared with service providers 
-            who help us operate the Platform, and if required by law or to protect rights.
-          </p>
+                <section>
+                  <h2 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-3">
+                    02. Identity Verification
+                  </h2>
+                  <p className="text-sm font-medium leading-relaxed text-gray-700">
+                    We collect officer credentials including Name, Badge ID/Username, and 
+                    Departmental Profile Images. This data is used strictly for internal 
+                    directory identification and secure line routing.
+                  </p>
+                </section>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">4. Cookies & Tracking</h2>
-          <p className="text-lg leading-relaxed">
-            The Platform may use cookies and similar technologies to improve functionality, 
-            analyze usage, and enhance your experience.
-          </p>
+                <section>
+                  <h2 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-3">
+                    03. Audit Logs & Metadata
+                  </h2>
+                  <p className="text-sm font-medium leading-relaxed text-gray-700">
+                    To maintain operational integrity, the system logs transmission timestamps 
+                    and sender/receiver IDs. The content of the transmission remains 
+                    encrypted and inaccessible to system administrators.
+                  </p>
+                </section>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">5. Data Security</h2>
-          <p className="text-lg leading-relaxed">
-            We implement reasonable security measures to protect your data. However, no method 
-            is 100% secure, and we cannot guarantee absolute protection.
-          </p>
+                <section>
+                  <h2 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-3">
+                    04. Data Retention
+                  </h2>
+                  <p className="text-sm font-medium leading-relaxed text-gray-700">
+                    Communications are retained as long as the account remains active. Officers 
+                    may purge local chat histories, which will remove message visibility from 
+                    their specific terminal instance.
+                  </p>
+                </section>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">6. User Rights</h2>
-          <p className="text-lg leading-relaxed">
-            You may access, update, or delete your account information. You can also manage 
-            your privacy preferences through account settings.
-          </p>
+                <section>
+                  <h2 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-3">
+                    05. Security Measures
+                  </h2>
+                  <p className="text-sm font-medium leading-relaxed text-gray-700">
+                    Access to this platform requires a valid authorization token. Unauthorized 
+                    attempts to intercept socket transmissions are logged and reported to the 
+                    Cyber Security Division.
+                  </p>
+                </section>
+              </div>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">7. Changes to Privacy Policy</h2>
-          <p className="text-lg leading-relaxed">
-            We may update this Privacy Policy periodically. Continued use of the Platform 
-            indicates acceptance of the revised policy.
-          </p>
-
-          <p className="text-sm text-gray-500 pt-10">
-            Last updated: {new Date().toLocaleDateString()}
-          </p>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <Footer />
+              {/* Policy Footer */}
+              <div className="pt-10 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                  Document ID: SEC-PRIV-2026-B
+                </div>
+                <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                  Last Updated: {new Date().toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

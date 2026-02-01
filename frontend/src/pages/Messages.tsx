@@ -1,95 +1,236 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import Loader from "../components/Loader";
 import { AppBar } from "../components/AppBar";
-import SideBar from "../components/SideBar";
-import { useNavigate, useParams } from "react-router-dom";
+import { Sidebar } from "../components/SideBar";
+import { io, Socket } from "socket.io-client";
+import { URL } from "../config";
+import MessageInput from "../components/MessagesComponents/RightSideComponents/MessageInput";
+import MessageList from "../components/MessagesComponents/RightSideComponents/MessageList";
+import ChatHeader from "../components/MessagesComponents/RightSideComponents/ChatHeader";
+import SearchBar from "../components/MessagesComponents/LeftSideComponents/SearchBar";
+import Tabs from "../components/MessagesComponents/LeftSideComponents/Tabs";
+import List from "../components/MessagesComponents/LeftSideComponents/List";
 import { Footer } from "../components/Footer";
 
-interface SimpleUser {
-  id: string;
-  firstname: string;
-  lastname: string;
-  profilepic: string;
-  about?: string;
-  username?: string;
-}
-
-export function Messages() {
-  const [users, setUsers] = useState<SimpleUser[]>([]);
-  const { path } = useParams<{ path: "followers" | "following" }>();
+export default function Messages() {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<any | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"chats" | "users">("chats");
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(
-          `http://localhost:3000/api/v1/follower/list/${path}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+    const userId = localStorage.getItem("userId");
+    if (userId) setCurrentUserId(userId);
+  }, []);
 
-        const list = path === "followers" ? res.data.followedBy : res.data.following;
-        setUsers(list || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [path]);
+  useEffect(() => {
+    if (!currentUserId) return;
+    const newSocket = io(URL, { transports: ['websocket', 'polling'] });
+    newSocket.on("connect", () => newSocket.emit("join", currentUserId));
+    
+    newSocket.on("new-message", (message: any) => {
+        // Update messages if the message belongs to current chat
+        setMessages((prev) => [...prev, message]);
+    });
 
-  if (loading) {
-    return (
-      <>
-        <AppBar />
+    setSocket(newSocket);
+    return () => { newSocket.close(); };
+  }, [currentUserId]);
 
-        <div className="flex bg-gray-950 min-h-screen pt-20">
-        <SideBar />
+  useEffect(() => {
+    if (currentUserId) {
+      fetchConversations();
+      fetchAllUsers();
+    }
+  }, [currentUserId]);
 
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-          <Loader />
+  const fetchConversations = async () => {
+    try {
+      const res = await axios.get(`${URL}/api/v1/message/getconversations`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      setConversations(res.data);
+    } catch (e) { console.error(e); } finally { setLoading(false); }
+  };
+
+  const fetchAllUsers = async () => {
+    try {
+      const res = await axios.get(`${URL}/api/v1/user/allusers`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      setAllUsers(res.data.users);
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchMessages = async (conversationId: string) => {
+    try {
+      const res = await axios.get(`${URL}/api/v1/message/conversations/${conversationId}/messages`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      setMessages(res.data);
+    } catch (e) { console.error(e); }
+  };
+
+  // FIXED: Logic to handle clicking a user from the Directory
+  const createOrGetConversation = async (receiverId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${URL}/api/v1/message/postconversations`,
+        { receiverId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const conv = res.data;
+      // Determine the 'otherUser' object for the UI
+      const otherUser = conv.participantOne.id === currentUserId 
+        ? conv.participantTwo 
+        : conv.participantOne;
+
+      const formattedConv = { ...conv, otherUser };
+
+      setSelectedConversation(formattedConv);
+      fetchMessages(conv.id);
+      setActiveTab("chats"); // Switch to chat view
+    } catch (error) {
+      console.error("Failed to initiate conversation:", error);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation) return;
+    try {
+      const res = await axios.post(`${URL}/api/v1/message/messages`, 
+        { conversationId: selectedConversation.id, content: newMessage },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+      );
+      setMessages((prev) => [...prev, res.data]);
+      setNewMessage("");
+      socket?.emit("send-message", { conversationId: selectedConversation.id, message: res.data });
+    } catch (e) { console.error(e); }
+  };
+
+  const selectConversation = (conv: any) => {
+    setSelectedConversation(conv);
+    fetchMessages(conv.id);
+  };
+
+  const handleSearch = (query: string) => setSearchQuery(query);
+  const formatTime = (date: string) => new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const filteredConversations = conversations.filter((c) => 
+    `${c.otherUser.firstname} ${c.otherUser.lastname}`.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const filteredUsers = allUsers.filter((u) => 
+    `${u.firstname} ${u.lastname}`.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+  <div className="min-h-screen flex flex-col bg-white">
+    <AppBar />
+
+    {/* Main Layout */}
+    <div className="flex flex-1 overflow-hidden">
+      <Sidebar />
+
+      <div className="flex-1 flex bg-gray-50">
+        {/* LEFT PANEL */}
+        <div className="w-[380px] bg-white border-r border-gray-200 flex flex-col">
+          {/* Header */}
+          <div className="p-6 border-b border-gray-100">
+            <h1 className="text-sm font-black uppercase tracking-widest text-gray-900 mb-4">
+              Secure Messages
+            </h1>
+
+            <SearchBar
+              searchQuery={searchQuery}
+              activeTab={activeTab}
+              handleSearch={handleSearch}
+            />
+
+            <div className="mt-4">
+              <Tabs
+                setActiveTab={setActiveTab}
+                setSearchQuery={setSearchQuery}
+                fetchConversations={fetchConversations}
+                fetchAllUsers={fetchAllUsers}
+                activeTab={activeTab}
+              />
+            </div>
+          </div>
+
+          {/* Conversation / User List */}
+          <div className="flex-1 overflow-y-auto">
+            <List
+              activeTab={activeTab}
+              filteredConversations={filteredConversations}
+              selectConversation={selectConversation}
+              selectedConversation={selectedConversation}
+              formatTime={formatTime}
+              filteredUsers={filteredUsers}
+              createOrGetConversation={createOrGetConversation}
+              currentUserId={currentUserId}
+            />
+          </div>
         </div>
 
-        {/* Main Content */}
-        <main className="col-span-12 md:col-span-9 lg:col-span-10 p-10 space-y-8 overflow-y-auto">
-          {/* Loader */}
-          {loading && (
-            <div className="space-y-6">
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={i}
-                  className="w-full rounded-xl bg-gray-900/60 backdrop-blur-sm border border-gray-800 animate-pulse flex items-center gap-4 px-6 py-4"
-                >
-                  <div className="h-14 w-14 bg-gray-800 rounded-full" />
-                  <div className="flex-1 space-y-3">
-                    <div className="h-4 w-1/4 bg-gray-800 rounded" />
-                    <div className="h-4 w-1/3 bg-gray-800 rounded" />
-                    <div className="h-3 w-1/2 bg-gray-800 rounded" />
-                  </div>
-                </div>
-              ))}
+        {/* RIGHT PANEL */}
+        <div className="flex-1 flex flex-col bg-white">
+          {selectedConversation ? (
+            <>
+              {/* Chat Header */}
+              <ChatHeader
+                firstname={selectedConversation.otherUser.firstname}
+                lastname={selectedConversation.otherUser.lastname}
+                profilepic={selectedConversation.otherUser.profilepic}
+                isTyping={isTyping}
+              />
+
+              {/* Messages */}
+              <div className="flex-1 bg-gray-50">
+                <MessageList
+                  messages={messages}
+                  currentUserId={currentUserId}
+                  messagesEndRef={messagesEndRef}
+                  formatTime={formatTime}
+                />
+              </div>
+
+              {/* Input */}
+              <MessageInput
+                newMessage={newMessage}
+                setNewMessage={setNewMessage}
+                sendMessage={sendMessage}
+              />
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50">
+              <div className="text-center max-w-sm">
+                <p className="text-xs font-black uppercase tracking-widest text-gray-400">
+                  Secure Communication Channel
+                </p>
+                <p className="mt-2 text-sm font-bold text-gray-600">
+                  Select a conversation from the left panel to begin
+                </p>
+              </div>
             </div>
           )}
-        </main>
+        </div>
       </div>
-      </>
-    );
-  }
-
-  return (<>
-    <div className="min-h-screen flex flex-col bg-gray-950">
-        <AppBar />
-        <div className="flex bg-gray-950 min-h-screen pt-20">
-        <SideBar />
-
-        <div className="flex-1 px-6 py-4 text-gray-100">
-        </div>
-        </div>
-        <Footer />
     </div>
-  </>);
+
+    <Footer />
+  </div>
+);
+
 }
-
-

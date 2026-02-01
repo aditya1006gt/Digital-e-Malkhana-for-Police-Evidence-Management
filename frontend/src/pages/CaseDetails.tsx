@@ -23,6 +23,7 @@ interface CaseRecord {
     sectionLaw: string;
     ioName: string;
     ioId: string;
+    userId: string; // Added to check ownership
     properties: Property[];
 }
 
@@ -33,11 +34,40 @@ export const CaseDetails = () => {
     const [caseInfo, setCaseInfo] = useState<CaseRecord | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+    // Module 6: Print-specific styles injection
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @media print {
+                nav, aside, button, .print-hidden { display: none !important; }
+                main { padding: 0 !important; margin: 0 !important; }
+                .max-w-5xl { max-width: 100% !important; }
+                .grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+                .border-2 { border: 1px solid #000 !important; }
+                body { background: white !important; }
+            }
+        `;
+        document.head.appendChild(style);
+        return () => { document.head.removeChild(style); };
+    }, []);
 
     useEffect(() => {
-        if (!localStorage.getItem("token")) {
-        navigate("/");
-    }}, []);
+        const token = localStorage.getItem("token");
+        if (!token) {
+            navigate("/");
+            return;
+        }
+        
+        // Get current user info to verify if they are the IO in charge
+        axios.get(`${URL}/api/v1/user/info`, {
+            headers: { Authorization: `Bearer ${token}` }
+        }).then(res => {
+            setCurrentUserId(res.data.user.id);
+        }).catch(err => console.error("User Auth Error", err));
+
+    }, []);
     
     // Edit Form State
     const [formData, setFormData] = useState({
@@ -71,7 +101,7 @@ export const CaseDetails = () => {
 
     useEffect(() => {
         fetchCaseData();
-    }, [id]);
+    }, [id]); 
 
     const handleUpdate = async () => {
         try {
@@ -81,7 +111,7 @@ export const CaseDetails = () => {
             setIsEditing(false);
             fetchCaseData();
         } catch (err) {
-            alert("Failed to update case details.");
+            alert("Failed to update case details. Ensure you are the authorized officer.");
         }
     };
 
@@ -100,6 +130,9 @@ export const CaseDetails = () => {
     );
 
     if (!caseInfo) return <div className="p-20 text-center">Case not found.</div>;
+
+    // Check if current user is the owner (In-charge Inspector/IO)
+    const isAuthorized = currentUserId === caseInfo.userId;
 
     return (
         <div className="min-h-screen bg-white">
@@ -123,12 +156,15 @@ export const CaseDetails = () => {
                                 <p className="text-gray-400 text-[10px] mt-1 font-mono uppercase">IO: {caseInfo.ioName} (ID: {caseInfo.ioId})</p>
                             </div>
                             <div className="flex gap-3 print:hidden">
-                                <button 
-                                    onClick={() => setIsEditing(true)}
-                                    className="px-5 py-2.5 border-2 border-gray-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 transition"
-                                >
-                                    Edit Details
-                                </button>
+                                {/* Only show Edit if Authorized */}
+                                {isAuthorized && (
+                                    <button 
+                                        onClick={() => setIsEditing(true)}
+                                        className="px-5 py-2.5 border-2 border-gray-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 transition"
+                                    >
+                                        Edit Details
+                                    </button>
+                                )}
                                 <button 
                                     onClick={() => window.print()} 
                                     className="px-5 py-2.5 bg-gray-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:shadow-lg transition"
@@ -162,7 +198,7 @@ export const CaseDetails = () => {
                                         </div>
                                         <div className="border-t border-gray-100 pt-3 mt-3 flex justify-between items-center">
                                             <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">{caseInfo.crimeNumber}</p>
-                                            <span className="text-[8px] font-black text-gray-300 group-hover:text-blue-400 uppercase tracking-widest">View History →</span>
+                                            <span className="text-[8px] font-black text-gray-300 group-hover:text-blue-400 uppercase tracking-widest print:hidden">View History →</span>
                                         </div>
                                     </div>
                                 </div>

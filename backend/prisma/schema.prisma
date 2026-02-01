@@ -28,6 +28,10 @@ model User {
   profilepic  String?  @default("https://www.gravatar.com/avatar/0000000000000000000000000000000?d=mp&f=y")
   cases       CaseRecord[]
   scanLogs    ScanLog[]
+
+  sentMessages   Message[]      @relation("SentMessages")
+  conversations1 Conversation[] @relation("ParticipantOne")
+  conversations2 Conversation[] @relation("ParticipantTwo")
 }
 
 enum Role {
@@ -158,4 +162,51 @@ model ScanLog {
 
   // Optional: Capture metadata like GPS or Device ID
   deviceInfo String?  
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  participantOneId String
+  participantTwoId String
+
+  participantOne User @relation("ParticipantOne", fields: [participantOneId], references: [id])
+  participantTwo User @relation("ParticipantTwo", fields: [participantTwoId], references: [id])
+
+  messages Message[]
+
+  conversationKey String? // base64 AES key encrypted for E2E
+
+  // Preview + sorting
+  lastMessageAt DateTime?
+  lastMessageId String?
+
+  // Unread count
+  unreadCountP1 Int @default(0)
+  unreadCountP2 Int @default(0)
+
+  @@unique([participantOneId, participantTwoId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  replyToId String?
+
+  senderId String
+  sender   User   @relation("SentMessages", fields: [senderId], references: [id])
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+
+  // Read + delete
+  isRead        Boolean  @default(false)
+  deletedForAll Boolean  @default(false)
+  deletedFor    String[] @default([])
+
+  // Indexes
+  @@index([conversationId, createdAt])
 }

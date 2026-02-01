@@ -54,7 +54,7 @@ export const QRScanner = () => {
                                 onClick={() => navigate(`/property/${manualCode}`)}
                                 className="w-full mt-4 bg-gray-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-black transition active:scale-[0.98]"
                             >
-                                VERIFY PROPERTY ID
+                                VERIFY PROPERTY ID 
                             </button>
                         </div>
                     </div>

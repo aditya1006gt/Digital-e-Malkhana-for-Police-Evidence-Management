@@ -184,7 +184,7 @@ export function UserProfile() {
             <div className="flex flex-wrap gap-4 pt-6 border-t border-gray-200">
               <button
                 className="flex-1 min-w-[200px] px-6 py-4 rounded-xl bg-gray-900 text-white font-black hover:bg-black transition active:scale-95 text-xs uppercase tracking-widest shadow-md"
-                onClick={() => navigate('/update')}
+                onClick={() => navigate('/update-profile')}
               >
                 Modify Official Records
               </button>

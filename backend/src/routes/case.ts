@@ -133,7 +133,6 @@ router.get("/specific/:id", authMiddleware, async (req, res) => {
     }
 });
 
-
 // 4. Log a Scan Event (When someone scans the physical tag)
 router.post("/scan/:qrString", authMiddleware, async (req, res) => {
     try {
@@ -313,62 +312,70 @@ const custodyMovementSchema = z.object({
     newLocation: z.string().min(1), // Every move usually changes physical location
 });
 
+
 // 6. Log Property Movement (Chain of Custody)
+// Update the move route in your backend case.ts
 router.post("/property/:id/move", authMiddleware, async (req, res) => {
     try {
-        const { id } = req.params; // Property ID
+        const { id } = req.params;
         const userId = req.userId!;
-        const validation = custodyMovementSchema.safeParse(req.body);
-
-        if (!validation.success) {
-            return res.status(400).json({ error: "Invalid movement data", details: validation.error.issues });
-        }
-
+        const { toOfficer, purpose, remarks, newLocation } = req.body;
         if (!id) {
             return res.status(400).json({ error: "Property ID is required" });
         }
 
-        const { toOfficer, purpose, remarks, newLocation } = validation.data;
-
-        // Fetch property and current officer/location
         const property = await prisma.property.findUnique({
             where: { id },
-            include: { case: { select: { ioName: true } } }
+            include: { 
+                case: true,
+                custodyLogs: { orderBy: { movedAt: 'desc' }, take: 1 }
+            }
         });
 
-        if (!property) return res.status(404).json({ error: "Property record not found" });
+        if (!property) return res.status(404).json({ error: "Property not found" });
 
-        // Perform move inside a Transaction
+        // Get the Logged in User's details
+        const currentUser = await prisma.user.findUnique({ where: { id: userId } });
+        // Trim spaces to prevent "John Doe" !== "John Doe " errors
+        const currentUserName = `${currentUser?.firstname} ${currentUser?.lastname}`.trim().toLowerCase();
+
+        // Determine current possessor
+        const currentPossessorName = (property.custodyLogs[0]?.toOfficer ?? property.case?.ioName ?? "")
+                                     .trim().toLowerCase();
+
+        // AUTHORIZATION CHECK
+        // Allow if Name matches OR if the user is the original creator (userId match)
+        const isOriginalCreator = property.case.userId === userId;
+        const isCurrentHolder = currentUserName === currentPossessorName;
+
+        if (!isCurrentHolder && !isOriginalCreator) {
+            return res.status(403).json({ 
+                error: `Access Denied. Current possessor is ${currentPossessorName}.` 
+            });
+        }
+
         const updatedLog = await prisma.$transaction(async (tx) => {
-            // 1. Create the Custody Log entry
             const log = await tx.custodyLog.create({
                 data: {
                     propertyId: id,
-                    fromOfficer: property.case.ioName, // Or fetch the last 'toOfficer' from logs
-                    toOfficer,
+                    fromOfficer: property.custodyLogs[0]?.toOfficer ?? property.case.ioName,
+                    toOfficer, // This will be the new possessor
                     purpose,
                     remarks: remarks ?? null,
                     movedAt: new Date(),
                 }
             });
 
-            // 2. Update the Property's current location field
             await tx.property.update({
                 where: { id },
                 data: { location: newLocation }
             });
-
             return log;
         });
 
-        return res.json({ 
-            message: "Movement recorded in Chain of Custody", 
-            log: updatedLog 
-        });
-
+        return res.json({ message: "Handover complete", log: updatedLog });
     } catch (err) {
-        console.error("CoC Error:", err);
-        return res.status(500).json({ error: "Failed to log movement" });
+        return res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
@@ -539,6 +546,66 @@ router.get("/dashboard-stats", authMiddleware, async (req, res) => {
         });
     } catch (err) {
         return res.status(500).json({ error: "Failed to fetch dashboard stats" });
+    }
+});
+
+// 7. Update Case Details (Only if User is the Creator or an Admin)
+router.put("/update/:id", authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.userId!;
+        if (!id) return res.status(400).json({ error: "Case ID is required" });
+        
+        const caseRecord = await prisma.caseRecord.findUnique({
+            where: { id }
+        });
+
+        if (!caseRecord) return res.status(404).json({ error: "Case not found" });
+
+        // Authorization check: Only the creator or an ADMIN can modify the case
+        // This handles your "Inspector in charge" logic
+        if (caseRecord.userId !== userId) {
+            const user = await prisma.user.findUnique({ where: { id: userId } });
+            if (user?.role !== "ADMIN") {
+                return res.status(403).json({ error: "Unauthorized: You do not own this case record." });
+            }
+        }
+
+        const { ioName, ioId, actLaw, sectionLaw, policeStation } = req.body;
+
+        const updatedCase = await prisma.caseRecord.update({
+            where: { id },
+            data: { ioName, ioId, actLaw, sectionLaw, policeStation }
+        });
+
+        return res.json({ message: "Case updated successfully", case: updatedCase });
+    } catch (err) {
+        return res.status(500).json({ error: "Update failed" });
+    }
+});
+
+// 8. Search All Accessible Cases
+router.get("/search", authMiddleware, async (req, res) => {
+    const { q } = req.query;
+    const userId = req.userId!;
+    if (!q || typeof q !== 'string') {
+        return res.status(400).json({ error: "Query parameter 'q' is required" });
+    }
+
+    try {
+        const cases = await prisma.caseRecord.findMany({
+            where: {
+                userId: userId, // Filter by user to keep it "My Entries"
+                OR: [
+                    { crimeNumber: { contains: String(q), mode: 'insensitive' } },
+                    { ioName: { contains: String(q), mode: 'insensitive' } },
+                ]
+            },
+            include: { _count: { select: { properties: true } } }
+        });
+        return res.json({ cases });
+    } catch (err) {
+        return res.status(500).json({ error: "Search failed" });
     }
 });
 

@@ -1,46 +1,51 @@
 import styled from "styled-components";
 
 interface LoaderProps {
-  // Added "table-row" to the allowed types
   variant?: "list" | "followers" | "profile" | "table-row";
 }
 
 const Loader = ({ variant = "list" }: LoaderProps) => {
   return (
     <StyledSkeleton variant={variant}>
-      {variant === "followers" && (
-        <>
-          <div className="avatar-sm" />
-          <div className="line-sm" />
-        </>
-      )}
-
-      {variant === "list" && (
-        <>
-          <div className="avatar" />
-          <div className="lines">
-            <div className="line short" />
-            <div className="line long" />
-          </div>
-        </>
-      )}
-
       {variant === "profile" && (
-        <div className="profile-wrapper">
-          <div className="avatar-big" />
-          <div className="big-line" />
-          <div className="big-line" />
-          <div className="big-line" />
+        <div className="profile-container-load">
+          {/* Header Skeleton */}
+          <div className="flex-row-load mb-12">
+            <div className="avatar-square-load" />
+            <div className="info-block-load">
+              <div className="line-heavy-load mb-4" />
+              <div className="line-med-load mb-4" />
+              <div className="line-small-load" />
+            </div>
+          </div>
+          {/* Stats Grid Skeleton */}
+          <div className="grid-load">
+            <div className="stat-box-load" />
+            <div className="stat-box-load" />
+            <div className="stat-box-load" />
+            <div className="stat-box-load" />
+          </div>
+          {/* Remarks Block */}
+          <div className="remarks-load" />
         </div>
       )}
 
-      {/* New logic for table rows in the dashboard */}
+      {variant === "list" && (
+        <div className="flex-row-load p-4">
+          <div className="avatar-med-load" />
+          <div className="lines-stack-load">
+            <div className="line-med-load" />
+            <div className="line-small-load" />
+          </div>
+        </div>
+      )}
+
       {variant === "table-row" && (
-        <div className="table-row-grid">
-           <div className="line cell-sm" />
-           <div className="line cell-md" />
-           <div className="line cell-lg" />
-           <div className="line cell-sm" />
+        <div className="table-row-grid-load">
+           <div className="cell-load" />
+           <div className="cell-load" />
+           <div className="cell-load" />
+           <div className="cell-load" />
         </div>
       )}
     </StyledSkeleton>
@@ -51,137 +56,99 @@ export default Loader;
 
 const StyledSkeleton = styled.div<{ variant: string }>`
   width: 100%;
-  border-radius: 12px;
-  overflow: hidden;
-  position: relative;
-  margin-bottom: 10px;
-  background: #0f0f0f;
-
-  ${({ variant }) => variant === "list" && `
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 16px;
-    background: #0d0d0d;
-  `}
-
-  ${({ variant }) => variant === "followers" && `
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    height: 56px;
-    background: #0d0d0d;
-  `}
-
-  ${({ variant }) => variant === "profile" && `
-    padding: 24px;
-    height: 280px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  `}
-
-  /* New CSS for the Dashboard Table Row */
-  ${({ variant }) => variant === "table-row" && `
-    padding: 20px;
-    background: rgba(30, 41, 59, 0.3);
-    border: 1px solid rgba(51, 65, 85, 0.5);
-    .table-row-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr 2fr 1fr;
-        gap: 20px;
-        align-items: center;
+  max-width: ${({ variant }) => (variant === "profile" ? "1000px" : "100%")};
+  background: transparent;
+  
+  /* Shared Animation Background */
+  .avatar-square-load, .avatar-med-load, .line-heavy-load, 
+  .line-med-load, .line-small-load, .stat-box-load, 
+  .remarks-load, .cell-load {
+    background: #f3f4f6; /* Gray-100 */
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0) 0%,
+        rgba(255,255,255,0.6) 50%,
+        rgba(255,255,255,0) 100%
+      );
+      animation: shimmer 1.5s infinite;
     }
-  `}
-
-  /* ELEMENTS */
-  .avatar {
-    width: 42px;
-    height: 42px;
-    background: #262626;
-    border-radius: 50%;
-    position: relative;
   }
 
-  .avatar-sm {
-    width: 38px;
-    height: 38px;
-    background: #262626;
-    border-radius: 50%;
-    position: relative;
+  /* Profile Variant Layout */
+  .profile-container-load {
+    padding: 40px;
+    background: white;
+    border: 1px solid #f3f4f6;
+    border-radius: 2rem;
   }
 
-  .avatar-big {
-    width: 100px;
-    height: 100px;
-    background: #262626;
-    border-radius: 50%;
-    margin-bottom: 16px;
-    position: relative;
-  }
-
-  .lines {
-    flex: 1;
+  .flex-row-load {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    gap: 40px;
+    align-items: flex-start;
   }
 
-  .line {
-    height: 10px;
-    border-radius: 6px;
-    background: #262626;
-    position: relative;
-  }
-
-  .cell-sm { width: 60px; }
-  .cell-md { width: 100px; }
-  .cell-lg { width: 100%; }
-
-  .short { width: 120px; }
-  .long { width: 70%; }
-
-  .line-sm {
+  .avatar-square-load {
     width: 160px;
-    height: 10px;
-    border-radius: 6px;
-    background: #262626;
-    position: relative;
+    height: 160px;
+    border-radius: 24px;
+    flex-shrink: 0;
   }
 
-  .profile-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    width: 60%;
+  .info-block-load {
+    flex: 1;
+    padding-top: 10px;
   }
 
-  .big-line {
+  .line-heavy-load { width: 60%; height: 32px; border-radius: 8px; }
+  .line-med-load { width: 40%; height: 18px; border-radius: 6px; }
+  .line-small-load { width: 30%; height: 14px; border-radius: 4px; }
+
+  .grid-load {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .stat-box-load {
+    height: 100px;
+    border-radius: 20px;
+  }
+
+  .remarks-load {
+    height: 120px;
     width: 100%;
-    height: 12px;
-    background: #262626;
-    border-radius: 8px;
-    position: relative;
+    border-radius: 20px;
   }
 
-  /* SHIMMER */
-  div::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      90deg,
-      rgba(255,255,255,0) 0%,
-      rgba(255,255,255,0.06) 50%,
-      rgba(255,255,255,0) 100%
-    );
-    animation: shimmer 1.3s infinite;
+  /* List / Table Variants */
+  .avatar-med-load { width: 48px; height: 48px; border-radius: 12px; }
+  .lines-stack-load { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  
+  .table-row-grid-load {
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr 1fr;
+    gap: 20px;
+    padding: 20px;
+    border-bottom: 1px solid #f3f4f6;
   }
+  .cell-load { height: 16px; }
 
   @keyframes shimmer {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
   }
+
+  /* Utilities */
+  .mb-12 { margin-bottom: 3rem; }
+  .mb-4 { margin-bottom: 1rem; }
 `;

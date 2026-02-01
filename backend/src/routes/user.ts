@@ -143,5 +143,76 @@ router.get("/info", authMiddleware, async (req: Request, res) => {
     }
 });
 
+router.get("/allusers", authMiddleware,  async (req, res) => {
+    try {
+        const users = await prisma.user.findMany({
+            select: {
+                id: true,
+                firstname: true,
+                lastname: true,
+                username: true,
+                profilepic: true,
+            },
+            take: 50, // Limit to 50 users for now
+            orderBy: {
+                firstname: 'asc' // Consistency is key for pagination
+            }
+        });
+        return res.json({ users });
+    }catch(err){
+        return res.status(500).json({ error: "Server error" });
+    }
+});
+
+router.get("/search", authMiddleware, async (req, res) => {
+    const { query } = req.query;
+
+    if (!query) {
+        return res.status(400).json({ error: "Search query is required" });
+    }
+    if (typeof query !== 'string') {
+        return res.status(400).json({ error: "Invalid query parameter" });
+    }
+    if (query.length < 3) {
+        return res.status(400).json({ error: "Query must be at least 3 characters long" });
+    }   
+    if (query.length > 50) {
+        return res.status(400).json({ error: "Query is too long" });
+    }
+    if(!req.userId){
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const searchQuery = query.trim(); // Clean up whitespace
+
+    try {
+        const users = await prisma.user.findMany({
+            where: {
+                // Ensure we don't find ourselves
+                NOT: { id: req.userId },
+                // Match email OR username OR firstname OR lastname
+                OR: [
+                    { email: { contains: searchQuery, mode: 'insensitive' } },
+                    { username: { contains: searchQuery, mode: 'insensitive' } },
+                    { firstname: { contains: searchQuery, mode: 'insensitive' } },
+                    { lastname: { contains: searchQuery, mode: 'insensitive' } }
+                ]
+            },
+            select: {
+                id: true,
+                firstname: true,
+                lastname: true,
+                username: true,
+                profilepic: true,
+            },
+            take: 10
+        });
+
+        return res.json({ users });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
 
 export default router;

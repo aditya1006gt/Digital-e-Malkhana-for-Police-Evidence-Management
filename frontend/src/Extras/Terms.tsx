@@ -1,103 +1,141 @@
 import { useEffect } from "react";
 import { AppBar } from "../components/AppBar";
-import { Footer } from "../components/Footer";
+import { Sidebar } from "../components/SideBar";
 import { useNavigate } from "react-router-dom";
 
 export default function Terms() {
   const navigate = useNavigate();
+
   useEffect(() => {
-      if (!localStorage.getItem("token")) {
+    if (!localStorage.getItem("token")) {
       navigate("/");
-  }}, []);
+    }
+  }, [navigate]);
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-950 text-gray-200">
-      {/* Top App Bar */}
+    <div className="min-h-screen bg-white flex flex-col h-screen overflow-hidden text-gray-900">
       <AppBar />
 
-      {/* Main content */}
-      <main className="flex-grow flex justify-center items-start pt-24 px-6 pb-12">
-        <div className="w-full max-w-5xl bg-gray-900/60 border border-gray-800 rounded-xl p-10 backdrop-blur-sm space-y-8">
-          <h1 className="text-4xl font-bold text-white mb-4">Terms of Service</h1>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Consistent Dashboard Sidebar */}
+        <aside className="hidden md:block w-64 border-r border-gray-100 bg-gray-50/50">
+          <Sidebar />
+        </aside>
 
-          <p className="text-lg leading-relaxed">
-            These Terms of Service govern access to and use of Shabd (“the Platform”).
-            By creating an account, accessing, or using the Platform, you agree to these
-            terms. If you do not agree, you must discontinue use.
-          </p>
+        <main className="flex-1 overflow-y-auto bg-gray-50/30 p-8 md:p-12 custom-scrollbar">
+          <div className="max-w-4xl mx-auto bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+            
+            {/* Document Header */}
+            <div className="bg-gray-900 p-8 text-white">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[10px] font-black tracking-[0.3em] uppercase opacity-60">
+                  Operational Manual
+                </span>
+                <span className="text-[10px] font-black tracking-[0.2em] uppercase bg-blue-600 px-3 py-1 rounded">
+                  v2.0 Standard
+                </span>
+              </div>
+              <h1 className="text-3xl font-black uppercase tracking-tighter">
+                Terms of Service & Usage
+              </h1>
+            </div>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">1. Use of Platform</h2>
-          <p className="text-lg leading-relaxed">
-            Shabd enables users to write, publish, interact, and share written content.
-            You are solely responsible for your activities and compliance with applicable laws.
-          </p>
-          <ul className="list-disc ml-6 space-y-2 text-lg leading-relaxed">
-            <li>You must provide accurate account information.</li>
-            <li>You may not impersonate individuals or organizations.</li>
-            <li>You may not attempt to disrupt or harm platform integrity.</li>
-            <li>You may not scrape, harvest, or automate access without permission.</li>
-            <li>You may not publish illegal, abusive, or harmful content.</li>
-          </ul>
+            <div className="p-8 md:p-12 space-y-10">
+              <section>
+                <p className="text-sm font-bold leading-relaxed text-gray-600 uppercase tracking-tight italic border-l-4 border-blue-600 pl-4">
+                  These terms govern the professional conduct and technical utilization of 
+                  the Secure Line communications interface. Access is granted only to 
+                  authorized personnel who agree to abide by the following directives.
+                </p>
+              </section>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">2. Content Ownership</h2>
-          <p className="text-lg leading-relaxed">
-            Users retain ownership of content posted on Shabd. By publishing, you grant
-            the Platform a non-exclusive, royalty-free license to display, distribute,
-            and share content within the Platform environment for as long as it remains published.
-          </p>
+              <div className="grid gap-10">
+                {/* 01. Usage Directive */}
+                <section>
+                  <h2 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-3">
+                    01. Professional Use Directive
+                  </h2>
+                  <p className="text-sm font-medium leading-relaxed text-gray-700 mb-4">
+                    The platform is designed for professional internal intelligence sharing. 
+                    Personnel are strictly prohibited from:
+                  </p>
+                  <ul className="space-y-2">
+                    {[
+                      "Falsifying officer credentials or impersonating superiors.",
+                      "Attempting to bypass socket encryption protocols.",
+                      "Automated scraping or extraction of departmental directories.",
+                      "Transmitting unauthorized personal data outside of protocol.",
+                    ].map((item, idx) => (
+                      <li key={idx} className="flex gap-3 items-start text-sm text-gray-600 font-bold uppercase text-[10px]">
+                        <span className="text-blue-600">[{idx + 1}]</span> {item}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">3. Content Guidelines & Moderation</h2>
-          <p className="text-lg leading-relaxed">
-            To maintain a safe environment, we may remove content that violates guidelines,
-            including hate speech, harassment, exploitation, plagiarism, illegal activity,
-            graphic content, or spam. Moderation decisions may not always be reversible.
-          </p>
+                {/* 02. Data Ownership */}
+                <section>
+                  <h2 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-3">
+                    02. Intellectual Property & Evidence
+                  </h2>
+                  <p className="text-sm font-medium leading-relaxed text-gray-700">
+                    While officers retain ownership of their reports, the department holds 
+                    a non-exclusive license to archive and audit transmissions for 
+                    operational purposes. Data published on shared channels becomes part 
+                    of the departmental record.
+                  </p>
+                </section>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">4. User Interactions</h2>
-          <p className="text-lg leading-relaxed">
-            Public interactions such as comments, likes, bookmarks, or follows are optional
-            and visible to other users. Users agree to engage respectfully and not misuse
-            platform tools for harassment or manipulation.
-          </p>
+                {/* 03. Service Integrity */}
+                <section>
+                  <h2 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-3">
+                    03. Operational Availability
+                  </h2>
+                  <p className="text-sm font-medium leading-relaxed text-gray-700">
+                    Service availability is managed by the technical division. No guarantee 
+                    is provided for 100% uptime during maintenance cycles. Transmission 
+                    delays during high-latency periods are to be expected.
+                  </p>
+                </section>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">5. Service Availability</h2>
-          <p className="text-lg leading-relaxed">
-            While we aim to provide reliable service, we do not guarantee uninterrupted
-            platform access, data retention, or real-time performance.
-          </p>
+                {/* 04. Account Revocation */}
+                <section>
+                  <h2 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-3">
+                    04. Terminal Access Revocation
+                  </h2>
+                  <p className="text-sm font-medium leading-relaxed text-gray-700">
+                    Access tokens may be revoked immediately for breaches of security, 
+                    unauthorized account sharing, or conduct detrimental to departmental 
+                    integrity.
+                  </p>
+                </section>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">6. Termination & Account Removal</h2>
-          <p className="text-lg leading-relaxed">
-            Accounts that violate terms, harm the platform, or disrupt other users may be
-            suspended or removed. Users may delete their accounts voluntarily.
-          </p>
+                {/* 05. Liability Disclaimer */}
+                <section>
+                  <h2 className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-3">
+                    05. System Liability
+                  </h2>
+                  <p className="text-[11px] font-bold text-gray-500 uppercase leading-tight bg-gray-50 p-4 border border-gray-100">
+                    THE SYSTEM IS PROVIDED ON AN "AS IS" BASIS. THE TECHNICAL DIVISION 
+                    DISCLAIMS ALL LIABILITY FOR DATA CORRUPTION, TRANSMISSION INTERRUPTIONS, 
+                    OR UNAUTHORIZED TERMINAL ACCESS RESULTING FROM USER NEGLIGENCE.
+                  </p>
+                </section>
+              </div>
 
-          <h2 className="text-2xl font-semibold text-white mt-8">7. Liability</h2>
-          <p className="text-lg leading-relaxed">
-            Shabd is provided “as is”. We disclaim liability for losses, damages, data
-            corruption, or inability to use the platform. This includes indirect or
-            consequential damages.
-          </p>
-
-          <h2 className="text-2xl font-semibold text-white mt-8">8. Third-Party Services</h2>
-          <p className="text-lg leading-relaxed">
-            Some features may integrate third-party services. We do not control external
-            providers and are not responsible for their behavior, practices, or policies.
-          </p>
-
-          <h2 className="text-2xl font-semibold text-white mt-8">9. Changes to Terms</h2>
-          <p className="text-lg leading-relaxed">
-            We may update terms periodically to reflect platform evolution.
-            Continued use of Shabd indicates acceptance of the revised terms.
-          </p>
-
-          <p className="text-sm text-gray-500 pt-10">
-            Last updated: {new Date().toLocaleDateString()}
-          </p>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <Footer />
+              {/* Document Footer */}
+              <div className="pt-10 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                  REF: TERMS-OP-CODE-X
+                </div>
+                <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                  REVISED: {new Date().toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

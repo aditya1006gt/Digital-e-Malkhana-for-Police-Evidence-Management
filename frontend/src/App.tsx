@@ -12,6 +12,8 @@ import { Analytics } from './pages/Analytics'     // New: Stats &
 import { UserProfile } from './pages/UserProfile'
 import Terms from './Extras/Terms'
 import Privacy from './Extras/Privacy'
+import { ManageEntries } from './pages/ManageEntries'
+import Messages from './pages/Messages'
 
 function App() {
   // Simple check for protected routes
@@ -37,6 +39,11 @@ function App() {
           {/* QR & Property Tracking */}
           <Route path="/scan" element={<QRScanner />} />
           <Route path="/property/:qrString" element={<PropertyInfo />} />
+
+          {/* {Messaging page} */}
+          <Route path="/messages" element={<Messages /> } />
+
+          <Route path="/manageentries" element={<ManageEntries />} />
           
           {/* Management & Logistics */}
           <Route path="/disposal" element={<Disposal />} />

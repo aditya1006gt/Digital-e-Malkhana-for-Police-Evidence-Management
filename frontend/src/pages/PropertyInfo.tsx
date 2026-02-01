@@ -5,22 +5,26 @@ import { URL } from "../config";
 import { AppBar } from "../components/AppBar";
 import { Sidebar } from "../components/SideBar";
 import { MovementModal } from "../components/MovementModal";
-import { DisposalModal } from "../components/DisposalModal"; // Ensure you create this component
+import { DisposalModal } from "../components/DisposalModal";
 
 export const PropertyInfo = () => {
     const { qrString } = useParams();
     const [property, setProperty] = useState<any>(null);
+    const [currentUser, setCurrentUser] = useState<any>(null); 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDisposalOpen, setIsDisposalOpen] = useState(false);
     const navigate = useNavigate();
-    useEffect(() => {
-        if (!localStorage.getItem("token")) {
-        navigate("/");
-    }}, []);
 
     useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            navigate("/");
+            return;
+        }
+
+        // Fetch property details
         axios.post(`${URL}/api/v1/case/scan/${qrString}`, {}, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+            headers: { Authorization: `Bearer ${token}` }
         })
         .then(res => {
             setProperty(res.data.property);
@@ -29,7 +33,45 @@ export const PropertyInfo = () => {
             console.error("Scan error:", err.response?.data);
             if (err.response?.status === 401) navigate("/");
         });
+
+        // Fetch current user info
+        axios.get(`${URL}/api/v1/user/info`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        .then(res => {
+            setCurrentUser(res.data.user);
+        })
+        .catch(err => console.error("User fetch error:", err));
     }, [qrString, navigate]);
+
+    // Enhanced Authorization Logic
+    const isAuthorized = () => {
+        if (!property || !currentUser) return false;
+
+        // 1. Get the current possessor name from logs or initial IO
+        const latestLog = property.custodyLogs && property.custodyLogs.length > 0 
+            ? property.custodyLogs[0] 
+            : null;
+
+        const currentPossessorName = (latestLog 
+            ? latestLog.toOfficer 
+            : property.case?.ioName || "").trim().toLowerCase();
+
+        // 2. Format current user name
+        const loggedInFullName = `${currentUser.firstname} ${currentUser.lastname}`.trim().toLowerCase();
+
+        // 3. Fallback: Check if the user ID matches the original creator ID
+        const isOriginalCreator = property.case?.userId === currentUser.id;
+
+        // Debugging logs (Check your browser console if buttons still don't show)
+        console.log("System Possessor:", currentPossessorName);
+        console.log("You (User):", loggedInFullName);
+        console.log("Is Creator:", isOriginalCreator);
+
+        return (loggedInFullName === currentPossessorName) || isOriginalCreator;
+    };
+
+    const canHandleEvidence = isAuthorized();
 
     if (!property) return (
         <div className="min-h-screen bg-white flex flex-col">
@@ -95,25 +137,34 @@ export const PropertyInfo = () => {
                                     <div className="flex gap-2">
                                         {property.status === 'IN_CUSTODY' && (
                                             <>
-                                                <button 
-                                                    onClick={() => setIsModalOpen(true)}
-                                                    className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-100"
-                                                >
-                                                    + Authorize Handover
-                                                </button>
-                                                <button 
-                                                    onClick={() => setIsDisposalOpen(true)}
-                                                    className="bg-red-50 text-red-600 border border-red-100 px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition"
-                                                >
-                                                    Dispose
-                                                </button>
+                                                {canHandleEvidence ? (
+                                                    <>
+                                                        <button 
+                                                            onClick={() => setIsModalOpen(true)}
+                                                            className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-100"
+                                                        >
+                                                            + Authorize Handover
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => setIsDisposalOpen(true)}
+                                                            className="bg-red-50 text-red-600 border border-red-100 px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition"
+                                                        >
+                                                            Dispose
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <div className="bg-amber-50 border border-amber-100 px-4 py-2 rounded-xl flex flex-col items-end">
+                                                        <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest">Locked</p>
+                                                        <p className="text-[10px] font-bold text-amber-800 italic">Held by {property.custodyLogs?.[0]?.toOfficer || property.case?.ioName}</p>
+                                                    </div>
+                                                )}
                                             </>
                                         )}
                                     </div>
                                 </div>
                                 
                                 <div className="space-y-10">
-                                    {/* Disposal Event (If exists) */}
+                                    {/* Disposal Event */}
                                     {property.disposal && (
                                         <div className="border-l-4 border-red-600 pl-8 py-1 relative">
                                             <div className="absolute -left-[9px] top-0 w-4 h-4 bg-red-600 rounded-full border-4 border-white shadow-sm"></div>
@@ -130,7 +181,7 @@ export const PropertyInfo = () => {
                                         </div>
                                     )}
 
-                                    {/* Active Movement Logs */}
+                                    {/* Movement Logs */}
                                     {property.custodyLogs?.map((log: any) => (
                                         <div key={log.id} className="border-l-4 border-blue-600 pl-8 py-1 relative">
                                             <div className="absolute -left-[9px] top-0 w-4 h-4 bg-blue-600 rounded-full border-4 border-white shadow-sm"></div>
@@ -160,7 +211,6 @@ export const PropertyInfo = () => {
                                         </div>
                                     ))}
 
-                                    {/* Initial Registration - Grayed Out (The Root) */}
                                     <div className="border-l-4 border-gray-800 pl-8 py-1 relative opacity-50">
                                         <div className="absolute -left-[9px] top-0 w-4 h-4 bg-gray-800 rounded-full border-4 border-white"></div>
                                         <p className="text-sm font-black text-gray-600 uppercase">Initial Registration (Malkhana Entry)</p>
@@ -186,7 +236,6 @@ export const PropertyInfo = () => {
                 </main>
             </div>
 
-            {/* Modals */}
             {isModalOpen && (
                 <MovementModal
                     propertyId={property.id} 
